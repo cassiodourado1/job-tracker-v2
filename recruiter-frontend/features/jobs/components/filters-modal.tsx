@@ -7,7 +7,10 @@ import {
   LINKEDIN_AGE_OPTIONS,
   LINKEDIN_MAX_AGE_LIMIT,
   LOCATION_SCOPES,
+  MAX_COMPANY_PAGES,
   MAX_SEARCH_TERMS,
+  WATCHED_PLATFORM_LABELS,
+  watchedCompanyFromUrl,
   SENIORITIES,
   STACK_LABELS,
   WORK_MODELS,
@@ -116,6 +119,16 @@ export function FiltersModal({
               min={1}
               placeholder="ex.: front-end"
               onChange={(searchTerms) => patch({ searchTerms })}
+            />
+          </Group>
+
+          <Group
+            title="Empresas acompanhadas"
+            hint="Cole o endereço da página de vagas da empresa: traz TODAS as vagas dela, não só as que casam com os termos. Funciona com empresas na Gupy, InHire, Greenhouse, Lever e Ashby — ex.: empresa.gupy.io, empresa.inhire.app, jobs.lever.co/empresa."
+          >
+            <CompanyPagesList
+              values={draft.companyPages}
+              onChange={(companyPages) => patch({ companyPages })}
             />
           </Group>
 
@@ -428,6 +441,129 @@ function KeywordList({
         className="min-w-32 flex-1 rounded-full border border-dashed border-zinc-300 bg-transparent px-3 py-1 text-xs outline-none transition focus:border-zinc-900 disabled:opacity-50 dark:border-zinc-700 dark:focus:border-zinc-100"
       />
     </>
+  );
+}
+
+/**
+ * Endereços de páginas de vagas, cada um com a plataforma que se reconheceu.
+ *
+ * O reconhecimento é o mesmo que a busca usa (`watchedCompanyFromUrl`), e
+ * aparece na hora de colar: endereço que não se reconhece fica marcado em vez
+ * de a empresa simplesmente não trazer vaga nenhuma sem explicação.
+ */
+function CompanyPagesList({
+  values,
+  onChange,
+}: {
+  values: string[];
+  onChange: (values: string[]) => void;
+}) {
+  const [text, setText] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const full = values.length >= MAX_COMPANY_PAGES;
+
+  const add = () => {
+    const raw = text.trim();
+
+    if (!raw) {
+      return;
+    }
+
+    // Sem esquema, como quem copia "empresa.gupy.io" da barra de endereço.
+    const url = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+
+    try {
+      new URL(url);
+    } catch {
+      setError("Isso não parece um endereço.");
+
+      return;
+    }
+
+    if (url.length > 300) {
+      setError("Endereço longo demais.");
+
+      return;
+    }
+
+    if (!values.includes(url) && !full) {
+      onChange([...values, url]);
+    }
+
+    setText("");
+    setError(null);
+  };
+
+  return (
+    <div className="flex w-full flex-col gap-2">
+      {values.length > 0 && (
+        <ul className="flex flex-col gap-1.5">
+          {values.map((value) => {
+            const company = watchedCompanyFromUrl(value);
+
+            return (
+              <li
+                key={value}
+                className="flex items-center justify-between gap-2 rounded-lg border border-zinc-200 px-3 py-1.5 text-xs dark:border-zinc-800"
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="truncate font-medium" title={value}>
+                    {company ? company.slug : value}
+                  </span>
+                  {company ? (
+                    <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                      {WATCHED_PLATFORM_LABELS[company.platform]}
+                    </span>
+                  ) : (
+                    <span
+                      className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                      title="Essa página não está numa plataforma que o app sabe ler. As vagas dessa empresa não vão aparecer."
+                    >
+                      não reconhecido
+                    </span>
+                  )}
+                </span>
+                <button
+                  type="button"
+                  aria-label={`Remover ${value}`}
+                  onClick={() => onChange(values.filter((item) => item !== value))}
+                  className="cursor-pointer rounded-full px-1.5 leading-none text-zinc-500 transition hover:text-zinc-900 dark:hover:text-zinc-100"
+                >
+                  ×
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <input
+        value={text}
+        disabled={full}
+        placeholder={
+          full
+            ? `máximo de ${MAX_COMPANY_PAGES} empresas`
+            : "ex.: empresa.gupy.io — Enter para adicionar"
+        }
+        onChange={(event) => {
+          setText(event.target.value);
+          setError(null);
+        }}
+        onKeyDown={(event) => {
+          // Enter dentro do <dialog> não pode submeter nem fechar nada.
+          if (event.key === "Enter") {
+            event.preventDefault();
+            add();
+          }
+        }}
+        onBlur={add}
+        className="rounded-lg border border-dashed border-zinc-300 bg-transparent px-3 py-1.5 text-xs outline-none transition focus:border-zinc-900 disabled:opacity-50 dark:border-zinc-700 dark:focus:border-zinc-100"
+      />
+      {error && (
+        <p role="alert" className="text-xs text-red-600 dark:text-red-400">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }
 
