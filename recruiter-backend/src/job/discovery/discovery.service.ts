@@ -14,6 +14,7 @@ import { GupySource } from './sources/gupy';
 import { LeverSource } from './sources/lever';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LinkedInAlertsSource } from './sources/linkedin-alerts';
+import { RemotarSource } from './sources/remotar';
 import { RemoteOkSource, RemotiveSource } from './sources/remote-boards';
 import { matches, matchesTerm } from './filters';
 import { fold } from './normalize';
@@ -66,6 +67,10 @@ export class DiscoveryService {
 
     this.sources = [
       new GupySource(),
+      // Logo depois da Gupy: a Remotar repassa vaga dela, e a ordem do array
+      // decide qual versão fica. A da Gupy declara o contrato em campo
+      // próprio; a da Remotar, por tag.
+      new RemotarSource(),
       new GreenhouseSource(watchlist.greenhouse),
       new AshbySource(watchlist.ashby),
       new LeverSource(watchlist.lever),
