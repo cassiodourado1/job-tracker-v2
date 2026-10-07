@@ -12,10 +12,12 @@ import type {
   ProfileDetail,
   ProfileLinks,
   Resume,
+  ResumeImportResult,
 } from "@recruit/shared";
 import { Field } from "@/components/field";
 import { saveProfileAction } from "@/features/profile/actions";
 import { LinkedInImportCard } from "@/features/profile/components/linkedin-import-card";
+import { ResumePdfImportCard } from "@/features/profile/components/resume-pdf-import-card";
 import { SectionList } from "@/features/profile/components/section-list";
 import type { ImportOutcome } from "@/features/profile/linkedin-import";
 
@@ -61,6 +63,46 @@ export function ResumeForm({ profile }: { profile: ProfileDetail }) {
       ...current,
       headline: outcome.headline ?? current.headline,
       location: outcome.location ?? current.location,
+    }));
+    setFeedback(null);
+  }, []);
+
+  // Do PDF vem o currículo inteiro, então as seções são trocadas — mas o que
+  // o PDF não trouxe fica: a data de nascimento nunca vem (não vai ao modelo),
+  // e seção vazia no PDF não apaga a que você já preencheu. Nos dados
+  // pessoais, campo vazio no resultado não apaga o que já estava escrito.
+  const applyResumeImport = useCallback((result: ResumeImportResult) => {
+    setResume((current) => {
+      const keep = <K extends keyof Resume>(key: K): Resume[K] => {
+        const imported = result.resume[key];
+
+        return Array.isArray(imported) && imported.length === 0
+          ? current[key]
+          : imported;
+      };
+
+      return {
+        birthDate: current.birthDate,
+        summary: result.resume.summary ?? current.summary,
+        experiences: keep("experiences"),
+        education: keep("education"),
+        skills: keep("skills"),
+        projects: keep("projects"),
+        languages: keep("languages"),
+        certifications: keep("certifications"),
+      };
+    });
+    setPersonal((current) => ({
+      ...current,
+      headline: result.headline ?? current.headline,
+      location: result.location ?? current.location,
+      email: result.email ?? current.email,
+      phone: result.phone ?? current.phone,
+      links: {
+        linkedin: result.links.linkedin ?? current.links.linkedin,
+        github: result.links.github ?? current.links.github,
+        website: result.links.website ?? current.links.website,
+      },
     }));
     setFeedback(null);
   }, []);
@@ -129,6 +171,11 @@ export function ResumeForm({ profile }: { profile: ProfileDetail }) {
           {feedback.message}
         </p>
       )}
+
+      <ResumePdfImportCard
+        profileId={profile.id}
+        onImported={applyResumeImport}
+      />
 
       <LinkedInImportCard onImported={applyImport} />
 

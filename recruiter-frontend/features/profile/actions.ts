@@ -2,8 +2,21 @@
 
 import { revalidatePath } from "next/cache";
 import { createProfileSchema, updateProfileSchema } from "@recruit/shared";
-import type { Profile, UpdateProfileInput } from "@recruit/shared";
-import { ApiError, createProfile, updateProfile } from "@/features/profile/api";
+import type {
+  Profile,
+  ResumeImportResult,
+  UpdateProfileInput,
+} from "@recruit/shared";
+import {
+  ApiError,
+  createProfile,
+  importResumeText,
+  updateProfile,
+} from "@/features/profile/api";
+import {
+  extractResumePdfText,
+  PdfImportError,
+} from "@/features/profile/resume-pdf";
 import {
   ImportError,
   parseLinkedInExport,
@@ -139,5 +152,38 @@ export async function importLinkedInAction(
     }
 
     return { status: "error", message: "Não consegui ler o arquivo." };
+  }
+}
+
+export type ResumePdfState =
+  | { status: "idle" }
+  | { status: "error"; message: string }
+  | { status: "success"; result: ResumeImportResult };
+
+/**
+ * PDF → texto (aqui) → currículo organizado (API, com os dados pessoais
+ * tirados antes do modelo). DEVOLVE para revisão; não grava nada.
+ */
+export async function importResumePdfAction(
+  profileId: string,
+  _prev: ResumePdfState,
+  formData: FormData,
+): Promise<ResumePdfState> {
+  const file = formData.get("file");
+
+  if (!(file instanceof File) || file.size === 0) {
+    return { status: "error", message: "Escolha o PDF do currículo." };
+  }
+
+  try {
+    const text = await extractResumePdfText(file);
+
+    return { status: "success", result: await importResumeText(profileId, text) };
+  } catch (error) {
+    if (error instanceof PdfImportError || error instanceof ApiError) {
+      return { status: "error", message: error.message };
+    }
+
+    return { status: "error", message: "Não consegui importar o currículo." };
   }
 }
