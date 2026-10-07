@@ -6,6 +6,7 @@ import type {
   DiscoverResult,
   JobPreferences,
   JobSearchResult,
+  JobSort,
 } from '@recruit/shared';
 import { AshbySource } from './sources/ashby';
 import { BrazilPortalsSource } from './sources/br-portals';
@@ -98,6 +99,7 @@ export class DiscoveryService {
     preferences: JobPreferences;
     excludedUrls: Set<string>;
     cursor?: string;
+    sort?: JobSort;
   }): Promise<DiscoverResult> {
     const { items, failed, fetchMs } = await this.collect({
       q: params.q,
@@ -112,7 +114,11 @@ export class DiscoveryService {
     const ranked = eligible
       .map((job) => ({
         job,
-        key: sortKey(job, scoreJob(job, params.skills, params.preferences)),
+        key: sortKey(
+          job,
+          scoreJob(job, params.skills, params.preferences),
+          params.sort,
+        ),
       }))
       .sort((a, b) => (a.key < b.key ? -1 : 1));
 

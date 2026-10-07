@@ -266,8 +266,26 @@ export const defaultJobPreferences: JobPreferences = {
  * estava na posição 20 passa para a 12 — as vagas 20 a 27 nunca apareceriam.
  * Chave ordenável não desloca quando se remove do meio.
  */
+/**
+ * Ordem da lista da descoberta.
+ *
+ * O padrão é a mais recente primeiro: vaga nova é a que ainda tem pouca gente
+ * concorrendo, e é a que você ainda não viu. Vaga sem data (o card da fonte
+ * não informa) vai para o fim, em vez de fingir que é de hoje.
+ */
+export const jobSortSchema = z.enum([
+  'recentes',
+  'relevancia',
+  'empresa',
+  'cargo',
+]);
+export type JobSort = z.infer<typeof jobSortSchema>;
+export const JOB_SORTS = jobSortSchema.options;
+export const DEFAULT_JOB_SORT: JobSort = 'recentes';
+
 export const discoverJobsSchema = z.strictObject({
   profileId: z.string().min(1),
+  sort: jobSortSchema.optional(),
   cursor: z.string().trim().max(2100).optional(),
   q: z.string().trim().max(120).optional(),
   /**

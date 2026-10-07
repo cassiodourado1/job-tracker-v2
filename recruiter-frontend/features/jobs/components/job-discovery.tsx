@@ -1,7 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Exhaustion, JobPreferences } from "@recruit/shared";
+import {
+  DEFAULT_JOB_SORT,
+  JOB_SORTS,
+  type Exhaustion,
+  type JobPreferences,
+  type JobSort,
+} from "@recruit/shared";
 import { discoverAction } from "@/features/jobs/actions";
 import { ExtractCard } from "@/features/jobs/components/extract-card";
 import {
@@ -62,6 +68,7 @@ export function JobDiscovery({
   const [lastRun, setLastRun] = useState<RunStats | null>(null);
 
   const [expanded, setExpanded] = useState(false);
+  const [sort, setSort] = useState<JobSort>(DEFAULT_JOB_SORT);
   const [filters, setFilters] = useState(preferences);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [savingFilters, setSavingFilters] = useState(false);
@@ -154,6 +161,7 @@ export function JobDiscovery({
         cursor: cursor.current ?? undefined,
         q: query || undefined,
         expanded,
+        sort,
       });
 
       if (!alive()) {
@@ -192,7 +200,7 @@ export function JobDiscovery({
     return () => {
       cancelled = true;
     };
-  }, [demand, running, exhausted, profileId, query, expanded, stop]);
+  }, [demand, running, exhausted, profileId, query, expanded, sort, stop]);
 
   // Pede o próximo lote quando o fim da lista aparece na tela.
   useEffect(() => {
@@ -231,8 +239,9 @@ export function JobDiscovery({
               <Counter items={items.length} total={total} />
             </div>
             <p className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
-              Enquanto ligada, traz vagas de Gupy, Greenhouse, Ashby, Lever e
-              agregadores de remoto. Nada é gravado até você salvar.
+              Enquanto ligada, traz vagas de Gupy, Remotar, Nerdin,
+              Programathor, Greenhouse, Ashby, Lever e agregadores de remoto.
+              Nada é gravado até você salvar.
               {expanded && (
                 <>
                   {" "}
@@ -258,6 +267,30 @@ export function JobDiscovery({
                 </span>
               )}
             </button>
+
+            {/* Ordem diferente: a lista recomeça do topo. Reordenar só o que
+                já está na tela misturaria a ordem nova com lotes que vieram
+                na antiga, e o cursor seguinte não casaria com nenhuma. */}
+            <label className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-300">
+              Ordenar
+              <select
+                value={sort}
+                onChange={(event) => {
+                  setSort(event.target.value as JobSort);
+                  setItems([]);
+                  setTotal(null);
+                  setExhausted(null);
+                  cursor.current = null;
+                }}
+                className="cursor-pointer rounded-lg border border-zinc-300 bg-transparent px-2 py-2 text-sm font-medium text-zinc-900 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-900"
+              >
+                {JOB_SORTS.map((option) => (
+                  <option key={option} value={option} className="text-zinc-900">
+                    {SORT_LABELS[option]}
+                  </option>
+                ))}
+              </select>
+            </label>
 
             {/* Acervo diferente: alternar zera a lista, senão o começo viria
                 da busca estreita e o resto da ampliada. */}
@@ -374,6 +407,13 @@ export function JobDiscovery({
  * "Na tela" só aparece enquanto há mais para carregar: igual ao total, seria
  * o mesmo número duas vezes.
  */
+const SORT_LABELS: Record<JobSort, string> = {
+  recentes: "Mais recentes",
+  relevancia: "Mais relevantes",
+  empresa: "Empresa (A–Z)",
+  cargo: "Cargo (A–Z)",
+};
+
 function Counter({ items, total }: { items: number; total: number | null }) {
   if (total === null) {
     return null;

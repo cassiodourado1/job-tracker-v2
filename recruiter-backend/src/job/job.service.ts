@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  DEFAULT_JOB_SORT,
   defaultJobPreferences,
   jobPreferencesSchema,
   resumeSchema,
@@ -12,6 +13,7 @@ import {
   type DismissJobInput,
   type Job,
   type JobSearchResult,
+  type JobSort,
   type SaveJobInput,
   type SavedJob,
   type UndismissJobInput,
@@ -42,6 +44,7 @@ export class JobService {
     cursor?: string;
     q?: string;
     expanded?: boolean;
+    sort?: JobSort;
   }): Promise<DiscoverResult> {
     const profile = await this.prisma.profile.findUnique({
       where: { id: params.profileId },
@@ -69,6 +72,7 @@ export class JobService {
         : defaultJobPreferences,
       excludedUrls: await this.resolvedUrls(params.profileId),
       cursor: params.cursor,
+      sort: params.sort ?? DEFAULT_JOB_SORT,
     });
 
     // Os anúncios agrupados também foram mostrados: estão listados no card.

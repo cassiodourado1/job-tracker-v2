@@ -1,4 +1,4 @@
-import type { JobPreferences, JobSearchResult } from '@recruit/shared';
+import type { JobPreferences, JobSearchResult, JobSort } from '@recruit/shared';
 import { fold } from './normalize';
 
 /**
@@ -162,10 +162,50 @@ function freshness(postedAt: string | null): number | null {
  * Chave de ordenação, e também o cursor.
  *
  * Precisa ser um TOTAL ORDER estável entre requisições, porque o usuário
- * remove itens do meio do conjunto enquanto navega. Pontuação decrescente
- * primeiro (por isso `1000 - score`), URL como desempate — duas vagas nunca
- * empatam, então nenhuma pode ser pulada nem repetida.
+ * remove itens do meio do conjunto enquanto navega. Cada modo põe o seu
+ * critério na frente; depois vem a pontuação decrescente (por isso
+ * `1000 - score`) e, por último, a URL — duas vagas nunca empatam, então
+ * nenhuma pode ser pulada nem repetida.
+ *
+ * As partes são separadas por `\u0001`, que é menor que qualquer caractere
+ * imprimível: "acme" vem antes de "acme labs" porque o separador perde para
+ * o espaço. Com ":" (58) seria o contrário, e a ordem alfabética erraria em
+ * todo nome que é prefixo de outro.
  */
-export function sortKey(job: JobSearchResult, score: number): string {
-  return `${String(1000 - score).padStart(4, '0')}:${job.url}`;
+export function sortKey(
+  job: JobSearchResult,
+  score: number,
+  sort: JobSort = 'relevancia',
+): string {
+  const tail = [String(1000 - score).padStart(4, '0'), job.url];
+
+  switch (sort) {
+    case 'recentes':
+      return [recencyKey(job.postedAt), ...tail].join(SEPARATOR);
+    case 'empresa':
+      return [fold(job.company), ...tail].join(SEPARATOR);
+    case 'cargo':
+      return [fold(job.title), ...tail].join(SEPARATOR);
+    default:
+      return tail.join(SEPARATOR);
+  }
+}
+
+const SEPARATOR = '\u0001';
+
+/** Maior que qualquer data invertida: vaga sem data vai para o fim. */
+const NO_DATE = '9'.repeat(15);
+
+/**
+ * Data decrescente como texto que ordena crescente: o complemento do
+ * timestamp, com largura fixa para "10" não vir antes de "9".
+ */
+function recencyKey(postedAt: string | null): string {
+  const time = postedAt ? new Date(postedAt).getTime() : NaN;
+
+  if (Number.isNaN(time)) {
+    return NO_DATE;
+  }
+
+  return String(1e14 - time).padStart(15, '0');
 }
