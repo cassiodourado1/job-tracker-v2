@@ -14,7 +14,7 @@ import {
   StackTags,
   formatSalary,
 } from "@/features/jobs/components/job-meta";
-import type { JobSearchResult } from "@/features/jobs/types";
+import type { JobSearchResult, JobVariant } from "@/features/jobs/types";
 import { safeExternalUrl } from "@/lib/safe-url";
 
 /**
@@ -30,6 +30,11 @@ export interface SearchResultItem {
   result: JobSearchResult;
   /** Já está em "Minhas vagas" — casado por URL no servidor. */
   saved: boolean;
+  /**
+   * Outros anúncios da mesma vaga (mesma empresa e título). Fora do `result`
+   * de propósito: o que se salva é o anúncio do card, exatamente como antes.
+   */
+  others?: JobVariant[];
 }
 
 /**
@@ -47,7 +52,15 @@ const SOURCE_LABELS: Record<string, string> = {
   gupy: "Gupy",
   remoteok: "RemoteOK",
   remotive: "Remotive",
+  remotar: "Remotar",
+  programathor: "Programathor",
   "portais-br": "portais BR",
+};
+
+const WORK_MODEL_LABELS: Record<string, string> = {
+  remoto: "remoto",
+  hibrido: "híbrido",
+  presencial: "presencial",
 };
 
 function sourceLabel(source: string): string {
@@ -71,6 +84,13 @@ export function ResultCard({
   dismissible?: boolean;
 }) {
   const { result } = item;
+  const others = item.others ?? [];
+  // Descartar o card descarta o grupo: com só o primeiro descartado, o
+  // anúncio seguinte assumiria o card na próxima busca e a vaga voltaria.
+  const group = [
+    result,
+    ...others.map((other) => ({ ...result, url: other.url, source: other.source })),
+  ];
   const [dismissed, setDismissed] = useState(false);
   // Estado local, e não só a prop: depois de salvar, o card confirma na hora,
   // sem depender de a página inteira revalidar.
@@ -107,6 +127,22 @@ export function ResultCard({
     });
   };
 
+  /** Uma ação por anúncio do grupo, em sequência; para no primeiro erro. */
+  const runForGroup = (
+    action: (job: JobSearchResult) => Promise<{ status: string; message?: string }>,
+  ) =>
+    run(async () => {
+      for (const job of group) {
+        const outcome = await action(job);
+
+        if (outcome.status === "error") {
+          return outcome;
+        }
+      }
+
+      return { status: "success" };
+    });
+
   // O card não some da grade: sumir reflui as quatro colunas inteiras a cada
   // clique, e o desfazer teria que morar em outro lugar. Ele encolhe e fica.
   if (dismissed) {
@@ -114,12 +150,13 @@ export function ResultCard({
       <li className="flex h-full flex-col justify-center gap-2 rounded-2xl border border-dashed border-white/10 p-5 text-sm text-zinc-400">
         <span className="line-clamp-2">
           Descartada — {result.company}: {result.title}
+          {others.length > 0 && ` (${group.length} anúncios)`}
         </span>
         <button
           type="button"
           onClick={() => {
             setDismissed(false);
-            run(() => undismissJobAction(profileId, result.url));
+            runForGroup((job) => undismissJobAction(profileId, job.url));
           }}
           disabled={pending}
           className="cursor-pointer self-start text-sm font-medium underline underline-offset-4 transition hover:text-zinc-900 disabled:opacity-50 dark:hover:text-zinc-100"
@@ -175,6 +212,8 @@ export function ResultCard({
             </span>
           )}
 
+          {others.length > 0 && <OtherPostings others={others} />}
+
           {error && (
             <p role="alert" className="text-sm text-red-600 dark:text-red-400">
               {error}
@@ -201,10 +240,14 @@ export function ResultCard({
                 type="button"
                 onClick={() => {
                   setDismissed(true);
-                  run(() => dismissJobAction(profileId, result));
+                  runForGroup((job) => dismissJobAction(profileId, job));
                 }}
                 disabled={pending}
-                title="Descartar — não aparece mais na busca"
+                title={
+                  others.length > 0
+                    ? `Descartar os ${group.length} anúncios — não aparecem mais na busca`
+                    : "Descartar — não aparece mais na busca"
+                }
                 aria-label="Descartar vaga"
                 className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-500 transition hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-900"
               >
@@ -235,5 +278,51 @@ export function ResultCard({
         </div>
       </Tilt>
     </li>
+  );
+}
+
+/**
+ * Os outros anúncios da mesma vaga, fechados por padrão: o card continua do
+ * tamanho dos outros, e quem quer se candidatar a mais de um abre a lista.
+ */
+function OtherPostings({ others }: { others: JobVariant[] }) {
+  return (
+    <details className="group text-sm">
+      <summary className="cursor-pointer list-none text-zinc-500 underline-offset-4 transition hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100">
+        +{others.length} {others.length === 1 ? "anúncio igual" : "anúncios iguais"} nesta empresa
+      </summary>
+      <ul className="mt-2 flex flex-col gap-1.5">
+        {others.map((other) => {
+          const url = safeExternalUrl(other.url);
+          const details = [
+            other.location,
+            other.workModel ? WORK_MODEL_LABELS[other.workModel] : null,
+            other.postedAt
+              ? new Date(other.postedAt).toLocaleDateString("pt-BR")
+              : null,
+            sourceLabel(other.source),
+          ].filter(Boolean);
+
+          return (
+            <li key={other.url} className="flex items-center justify-between gap-2">
+              <span className="truncate text-xs text-zinc-500 dark:text-zinc-400" title={details.join(" · ")}>
+                {details.join(" · ")}
+              </span>
+              {url && (
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex shrink-0 items-center gap-1 text-xs font-medium underline underline-offset-4"
+                >
+                  <IconExternalLink />
+                  abrir
+                </a>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </details>
   );
 }

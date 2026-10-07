@@ -14,7 +14,7 @@ import {
   type SearchResultItem,
 } from "@/features/jobs/components/result-card";
 import { SearchTimer, format } from "@/features/jobs/components/search-timer";
-import type { JobSearchResult } from "@/features/jobs/types";
+import type { DiscoveredJob } from "@/features/jobs/types";
 import { saveProfileAction } from "@/features/profile/actions";
 
 /**
@@ -459,13 +459,19 @@ function Status({
  */
 function merge(
   previous: SearchResultItem[],
-  incoming: JobSearchResult[],
+  incoming: DiscoveredJob[],
   saved: Set<string>,
 ): SearchResultItem[] {
   const seen = new Set(previous.map((item) => item.result.url));
   const added = incoming
-    .filter((result) => !seen.has(result.url))
-    .map((result) => ({ result, saved: saved.has(result.url) }));
+    .filter((job) => !seen.has(job.url))
+    // `others` sai do `result`: o que se salva é o anúncio do card, sem a
+    // lista dos outros grudada nele.
+    .map(({ others, ...result }) => ({
+      result,
+      others,
+      saved: saved.has(result.url),
+    }));
 
   return added.length > 0 ? [...previous, ...added] : previous;
 }

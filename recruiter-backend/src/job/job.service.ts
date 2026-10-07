@@ -71,7 +71,11 @@ export class JobService {
       cursor: params.cursor,
     });
 
-    await this.recordSeen(params.profileId, result.items);
+    // Os anúncios agrupados também foram mostrados: estão listados no card.
+    await this.recordSeen(
+      params.profileId,
+      result.items.flatMap((item) => [item, ...item.others]),
+    );
 
     return result;
   }
@@ -91,7 +95,7 @@ export class JobService {
    */
   private async recordSeen(
     profileId: string,
-    items: JobSearchResult[],
+    items: Pick<JobSearchResult, 'url' | 'source'>[],
   ): Promise<void> {
     if (items.length === 0) {
       return;
@@ -348,7 +352,7 @@ function toJobDto(row: JobModel): Job {
  */
 export function toSeenRows(
   profileId: string,
-  items: JobSearchResult[],
+  items: Pick<JobSearchResult, 'url' | 'source'>[],
 ): { profileId: string; url: string; source: string }[] {
   const seen = new Set<string>();
   const rows: { profileId: string; url: string; source: string }[] = [];

@@ -21,6 +21,7 @@ import { matches, matchesTerm } from './filters';
 import { fold } from './normalize';
 import type { DiscoveryQuery, DiscoverySource } from './provider';
 import { searchTermsFor } from './provider';
+import { groupSameJob, sameJobKey } from './grouping';
 import { scoreJob, sortKey } from './scoring';
 
 /**
@@ -113,8 +114,10 @@ export class DiscoveryService {
       }))
       .sort((a, b) => (a.key < b.key ? -1 : 1));
 
-    const unseen = ranked.filter(
-      ({ job }) => !params.excludedUrls.has(job.url),
+    // Agrupar depois de tirar o resolvido: descartado o anúncio da frente, o
+    // seguinte assume o card. A chave do cursor é a do anúncio que encabeça.
+    const unseen = groupSameJob(
+      ranked.filter(({ job }) => !params.excludedUrls.has(job.url)),
     );
 
     // Chave ordenável, e não deslocamento: o usuário descarta vagas entre uma
@@ -130,7 +133,8 @@ export class DiscoveryService {
     return {
       items: page.map(({ job }) => job),
       nextCursor: after.length > page.length && last ? last.key : null,
-      total: eligible.length,
+      // Cards, não URLs: nove anúncios da mesma vaga são uma vaga na tela.
+      total: new Set(eligible.map(sameJobKey)).size,
       exhausted:
         page.length > 0 ? null : eligible.length > 0 ? 'nada-novo' : 'fim',
       failedSources: failed,

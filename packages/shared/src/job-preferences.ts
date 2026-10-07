@@ -293,14 +293,41 @@ export const exhaustionSchema = z.enum(['fim', 'nada-novo']);
 export type Exhaustion = z.infer<typeof exhaustionSchema>;
 
 /**
+ * Outro anúncio da MESMA vaga: mesma empresa, mesmo título, URL diferente.
+ *
+ * Empresa grande publica a mesma posição várias vezes — medido, o PagBank
+ * tinha 9 anúncios de "Engenheiro de Software Sr. (Java)" na Gupy. São
+ * candidaturas distintas, e se candidatar a várias aumenta a chance; mas
+ * nove cards idênticos enterram o resto da lista. Então viram um card, com os
+ * anúncios listados nele.
+ */
+export const jobVariantSchema = z.object({
+  url: externalUrlSchema,
+  source: z.string(),
+  location: z.string().nullable(),
+  workModel: workModelSchema.nullable(),
+  postedAt: z.iso.datetime().nullable(),
+});
+
+export type JobVariant = z.infer<typeof jobVariantSchema>;
+
+/** Uma vaga da descoberta, com os outros anúncios dela. */
+export const discoveredJobSchema = jobSearchResultSchema.extend({
+  others: z.array(jobVariantSchema),
+});
+
+export type DiscoveredJob = z.infer<typeof discoveredJobSchema>;
+
+/**
  * Resposta da descoberta.
  *
  * `total` é quantas vagas passam no filtro, não quantas vieram no lote — é o
  * número que diz "42 vagas em 20 empresas" e evita a tela prometer um fluxo
- * infinito que não existe.
+ * infinito que não existe. Anúncios repetidos contam uma vez: é o número de
+ * cards, não de URLs.
  */
 export const discoverResultSchema = z.object({
-  items: z.array(jobSearchResultSchema),
+  items: z.array(discoveredJobSchema),
   nextCursor: z.string().nullable(),
   total: z.number().int(),
   exhausted: exhaustionSchema.nullable(),
