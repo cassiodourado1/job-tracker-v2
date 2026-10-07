@@ -196,6 +196,16 @@ export const defaultJobPreferences: JobPreferences = {
     'desenvolved',
     'backend',
     'back-end',
+    // Front-end nas três grafias que os portais usam. Sem elas, "Especialista
+    // Frontend (React)" e "DEV FRONT END VUE.JS" eram descartadas: medido, 9
+    // de 53 vagas de front-end da Gupy caíam só pelo título.
+    'frontend',
+    'front-end',
+    'front end',
+    'desarroll',
+    'líder técnico',
+    'drupal',
+    'wordpress',
     'fullstack',
     'full-stack',
     'software',

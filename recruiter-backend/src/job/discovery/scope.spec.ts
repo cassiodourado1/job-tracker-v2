@@ -1,4 +1,8 @@
-import type { JobPreferences, JobSearchResult } from '@recruit/shared';
+import {
+  defaultJobPreferences,
+  type JobPreferences,
+  type JobSearchResult,
+} from '@recruit/shared';
 import { matches } from './filters';
 
 /**
@@ -132,5 +136,37 @@ describe('idade das vagas de alerta do LinkedIn', () => {
 
   it('vaga sem data passa', () => {
     expect(matches(vaga(null), preferences(), HOJE)).toBe(true);
+  });
+});
+
+/**
+ * O filtro de título PADRÃO, que vale para quem nunca salvou um filtro.
+ *
+ * Os títulos abaixo são formas reais medidas na Gupy, com empresas trocadas.
+ * Todos eram descartados antes de o padrão conhecer front-end.
+ */
+describe('títulos com o filtro padrão', () => {
+  function titled(title: string): JobSearchResult {
+    return { ...job(null), title, source: 'gupy' };
+  }
+
+  it.each([
+    ['Especialista Frontend (REACT)'],
+    ['DEV FRONT END VUE.JS PL - RH0000'],
+    ['Senior Front-End [Commerce Cloud]'],
+    ['Desarrollador Frontend Web & Mobile'],
+    ['Líder Técnico III (React / NodeJS)'],
+    ['Especialista Drupal'],
+    ['Analista WordPress Pleno'],
+  ])('mantém "%s"', (title) => {
+    expect(matches(titled(title), defaultJobPreferences)).toBe(true);
+  });
+
+  it.each([
+    ['Executivo de Vendas'],
+    ['Estágio em Desenvolvimento Front End'],
+    ['Analista Financeiro'],
+  ])('continua descartando "%s"', (title) => {
+    expect(matches(titled(title), defaultJobPreferences)).toBe(false);
   });
 });
