@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import {
   DEFAULT_JOB_SORT,
   JOB_SORTS,
@@ -237,6 +238,7 @@ export function JobDiscovery({
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <h2 className="text-lg font-semibold">Procurar vagas</h2>
               <Counter items={items.length} total={total} />
+              {query && <SearchFilterNotice query={query} />}
             </div>
             <p className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
               Enquanto ligada, traz vagas de portais, agregadores e empresas.
@@ -426,6 +428,33 @@ function Counter({ items, total }: { items: number; total: number | null }) {
       {items < total && (
         <span className="text-xs tabular-nums">{items} na tela</span>
       )}
+    </span>
+  );
+}
+
+/**
+ * Aviso de que a busca está restrita por um texto.
+ *
+ * Com texto na caixa, a descoberta muda de natureza: os portais por busca
+ * procuram SÓ esse texto, no lugar dos termos do perfil, e a vaga precisa ter
+ * a palavra no título, na empresa ou nas tecnologias. O texto fica na URL e
+ * sobrevive a recarregar a página — sem este aviso, 525 vagas virando 148
+ * parecia defeito.
+ */
+function SearchFilterNotice({ query }: { query: string }) {
+  return (
+    <span
+      className="flex items-baseline gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200"
+      title="Com texto na busca, os portais procuram só este texto, no lugar dos seus termos de busca, e a vaga precisa ter a palavra no título, na empresa ou nas tecnologias."
+    >
+      Filtrando por “{query}”
+      <span aria-hidden="true">·</span>
+      <Link
+        href="/vagas"
+        className="font-medium underline underline-offset-2 hover:no-underline"
+      >
+        limpar
+      </Link>
     </span>
   );
 }
