@@ -25,8 +25,10 @@ sugere o novo status. Você confirma com um clique.
 | Funcionalidade | Precisa de chave da Anthropic? |
 | --- | --- |
 | Candidaturas: cadastro, status, histórico, busca, filtros e ordenação | não |
-| Descoberta de vagas em Gupy, Greenhouse, Lever, Ashby, agregadores remotos, portais brasileiros e alertas do LinkedIn | não |
-| Currículo estruturado, PDF pela impressão do navegador e versão congelada em cada candidatura | não |
+| Descoberta de vagas em Gupy, Remotar, Nerdin, Programathor, Greenhouse, Lever, Ashby, agregadores remotos, portais brasileiros e alertas do LinkedIn | não |
+| Empresas acompanhadas: todas as vagas de empresas que você escolhe, na Gupy, InHire, Greenhouse, Lever ou Ashby | não |
+| Lista de vagas com contador, anúncios repetidos da mesma vaga num card só e ordenação (mais recentes, relevância, empresa, cargo) | não |
+| Currículo estruturado, import do LinkedIn, PDF pela impressão do navegador e versão congelada em cada candidatura | não |
 | Preenchimento de formulário de candidatura no Chrome, parando antes do envio | não |
 | Painel com funil, tempo até a primeira resposta e aproveitamento por fonte | não |
 | Leitura dos emails do processo seletivo e vínculo com a candidatura certa | não |
@@ -34,6 +36,7 @@ sugere o novo status. Você confirma com um clique.
 | "Resolver por IA": vincular ou criar candidaturas a partir de vários emails | sim |
 | Extração de vaga a partir de um link | sim |
 | Respostas para perguntas abertas de formulário, a partir do seu currículo | sim |
+| Importar currículo a partir de um PDF | sim |
 
 Sem a chave, tudo da primeira metade funciona. Com ela, o Claude entra só onde
 você pede, e o que ele propõe passa pelo seu clique antes de virar dado.
@@ -88,11 +91,17 @@ Abra **http://127.0.0.1:3000**.
 1. **Escolha ou crie um perfil.** Perfil é só um seletor: dá para separar, por
    exemplo, "Backend" e "Tech Lead", cada um com seu currículo e suas
    candidaturas.
-2. **Preencha o currículo** em *Currículo*, ou importe o arquivo de dados que o
-   LinkedIn exporta (*Configurações → Privacidade de dados → Obter uma cópia
-   dos seus dados*). O arquivo é lido na sua máquina e descartado.
-3. **Procure vagas** em *Vagas*: ajuste os filtros, salve as que interessam e
-   descarte o resto.
+2. **Preencha o currículo** em *Currículo*. Dá para importar de um **PDF**
+   (precisa da chave da Anthropic; veja abaixo o que é enviado) ou do arquivo
+   de dados que o LinkedIn exporta (*Configurações → Privacidade de dados →
+   Obter uma cópia dos seus dados*). Nos dois casos o formulário é preenchido
+   para você revisar, e nada é gravado até você salvar.
+3. **Procure vagas** em *Vagas*. Em *Filtros* ficam os **termos de busca**
+   (o que os portais procuram — sem "front-end" ali, vaga de front-end nem
+   chega), o título, a modalidade, o contrato e as **empresas acompanhadas**.
+   Salve as vagas que interessam e descarte o resto. A caixa *Filtrar por
+   cargo ou tecnologia* restringe a busca ao texto digitado, e a tela avisa
+   enquanto ela estiver em uso.
 4. **Registre candidaturas** em *Candidaturas*, ou deixe que venham dos
    emails (veja abaixo).
 
@@ -109,8 +118,8 @@ ANTHROPIC_API_KEY=sua-chave
 
 A chave precisa de crédito: sem saldo, a API responde erro e a tela avisa.
 
-Os modelos usados são o **Haiku** para ler vagas e emails e o **Sonnet** para
-escrever respostas de formulário. O app só chama o Claude quando você pede
+Os modelos usados são o **Haiku** para ler vagas, emails e currículos e o
+**Sonnet** para escrever respostas de formulário. O app só chama o Claude quando você pede
 (um clique, uma seleção) ou ao sincronizar emails já vinculados a uma
 candidatura. No uso pessoal, cada chamada custa frações de centavo de dólar.
 
@@ -119,7 +128,10 @@ O que sai da sua máquina:
 - **Emails:** só os vinculados a uma candidatura e com remetente confirmado.
   A caixa de entrada nunca é enviada.
 - **Currículo:** só a parte profissional, sem nome, contatos ou data de
-  nascimento.
+  nascimento. Na importação de PDF, o texto é extraído na sua máquina e
+  perde nome, email, telefone, links, CPF e linhas de dados pessoais antes de
+  ir ao Claude; email, telefone e links preenchem o perfil direto. A cidade
+  fica, para a busca achar vagas locais.
 - **Vagas:** o texto da vaga que você está usando.
 
 Texto escrito pelo Claude carrega a marca d'água estatística que a Anthropic
@@ -163,9 +175,27 @@ curl -X POST -H 'Content-Type: application/json' \
 
 ### Empresas acompanhadas na descoberta
 
-Gupy, agregadores remotos, portais brasileiros e alertas do LinkedIn funcionam
-sem configurar nada. Para acompanhar também o board de empresas específicas no
-Greenhouse, Ashby ou Lever, liste os slugs, separados por vírgula:
+A busca por portais só acha o que casa com os seus termos. Para trazer
+**todas** as vagas de uma empresa, cole o endereço da página de vagas dela em
+*Vagas → Filtros → Empresas acompanhadas*. A plataforma é reconhecida pelo
+endereço, e a tela mostra na hora se reconheceu:
+
+| Plataforma | Exemplo de endereço |
+| --- | --- |
+| Gupy | `empresa.gupy.io` |
+| InHire | `empresa.inhire.app` |
+| Greenhouse | `boards.greenhouse.io/empresa` |
+| Lever | `jobs.lever.co/empresa` |
+| Ashby | `jobs.ashbyhq.com/empresa` |
+
+Muitas empresas não têm sistema de vagas próprio: a página "Vagas" do site
+mostra vagas hospedadas numa dessas plataformas. Abra uma vaga no site da
+empresa e veja para onde o link aponta. O site da CI&T, por exemplo, já é
+reconhecido e lido pela Lever dela. Empresas em Workday, SuccessFactors ou
+Oracle não são lidas.
+
+Também dá para fixar boards no `.env`, valendo para todos os perfis. Liste os
+slugs, separados por vírgula:
 
 ```env
 DISCOVERY_GREENHOUSE_BOARDS=empresa-um,empresa-dois
@@ -295,7 +325,9 @@ npm run db:studio                  # navega pelo banco
 ```
 
 - Rode `npm run build:shared` de novo sempre que mexer em `packages/shared`:
-  os dois apps importam o código compilado dele.
+  os dois apps importam o código compilado dele. Depois, **reinicie a API**:
+  o modo de desenvolvimento dela não percebe a mudança no pacote e continua
+  com a versão antiga em memória.
 - O `dev:worker` reinicia a API a cada arquivo salvo e, com
   `IMAP_SYNC_ON_BOOT=true`, sincronizaria o email a cada reinício. Durante o
   desenvolvimento, use `IMAP_SYNC_ON_BOOT=false`.
@@ -320,3 +352,21 @@ rótulo.
 
 **A IA responde "sem crédito".** A chave existe, mas a conta da Anthropic está
 sem saldo. Adicione créditos em `console.anthropic.com`.
+
+**"Importação indisponível: defina ANTHROPIC_API_KEY".** A linha existe no
+`recruiter-backend/.env`, mas está vazia. Preencha com a chave (`sk-ant-...`,
+sem aspas) e reinicie a API: o `.env` só é lido quando ela sobe.
+
+**O `npm install` falha com E401.** O seu `~/.npmrc` global aponta para um
+registry privado (de um trabalho anterior, por exemplo) com credencial
+vencida. Instale pelo registry público, sem mexer no arquivo:
+`npm install --registry=https://registry.npmjs.org/`.
+
+**A busca trouxe bem menos vagas que antes.** Veja se há texto na caixa
+*Filtrar por cargo ou tecnologia*: com texto, os portais procuram só ele, e a
+vaga precisa ter a palavra no título. A tela mostra "Filtrando por …" com um
+*limpar* ao lado. Sem texto, confira os termos de busca e o filtro de título
+em *Filtros*.
+
+**"O PDF quase não tem texto".** O currículo é uma imagem escaneada, sem
+texto selecionável. Exporte de novo pelo editor (Word, Google Docs, Canva).
