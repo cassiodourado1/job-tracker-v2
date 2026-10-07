@@ -216,7 +216,6 @@ export function ResultCard({
               >
                 {result.title}
               </span>
-              <PostedAt postedAt={result.postedAt} source={result.source} />
             </div>
             <span
               className="shrink-0 rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
@@ -243,9 +242,15 @@ export function ResultCard({
             </p>
           )}
 
-          {/* mt-auto: as ações encostam no rodapé, então os cards da linha
-              terminam alinhados mesmo com conteúdos de tamanhos diferentes. */}
-          <div className="mt-auto flex flex-wrap items-center gap-2">
+          {/* mt-auto: data e ações encostam no rodapé, então os cards da linha
+              terminam alinhados mesmo com conteúdos de tamanhos diferentes. A
+              data é o penúltimo item, logo acima dos botões; sem data, o
+              empurrão para o rodapé fica com os botões. */}
+          <PostedAt postedAt={result.postedAt} source={result.source} />
+
+          <div
+            className={`${result.postedAt ? "" : "mt-auto "}flex flex-wrap items-center gap-2`}
+          >
             {portalUrl && (
               <a
                 href={portalUrl}
@@ -406,7 +411,7 @@ function PostedAt({
 
   return (
     <span
-      className={`text-xs ${fresh ? "font-medium text-emerald-700 dark:text-emerald-400" : "text-zinc-500 dark:text-zinc-400"}`}
+      className={`mt-auto text-xs ${fresh ? "font-medium text-emerald-700 dark:text-emerald-400" : "text-zinc-500 dark:text-zinc-400"}`}
       title={date.toLocaleString("pt-BR", { dateStyle: "long", timeStyle: "short" })}
     >
       {verb} {relativeDays(days)}
