@@ -41,13 +41,11 @@ describe('fingerprint', () => {
   it('ordem das chaves não muda a impressão', () => {
     // O Prisma não garante a ordem das chaves de um Json. Sem estabilizar,
     // cada candidatura criaria uma versão nova sem você ter mudado nada.
-    const a = { ...emptyResume, skills: ['Go'] };
-    const b = JSON.parse(
-      JSON.stringify({ skills: ['Go'], ...emptyResume, skills2: undefined }),
-    ) as Resume;
+    const a: Resume = { ...emptyResume, skills: ['Go'] };
+    const b = Object.fromEntries(Object.entries(a).reverse()) as Resume;
 
-    b.skills = ['Go'];
-
+    // Mesmo conteúdo, chaves em ordem inversa — confere que o teste testa.
+    expect(Object.keys(b)).not.toEqual(Object.keys(a));
     expect(fingerprint(a)).toBe(fingerprint(b));
   });
 
