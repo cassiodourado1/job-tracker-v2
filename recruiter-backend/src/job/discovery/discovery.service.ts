@@ -12,6 +12,7 @@ import { BrazilPortalsSource } from './sources/br-portals';
 import { GreenhouseSource } from './sources/greenhouse';
 import { GupySource } from './sources/gupy';
 import { LeverSource } from './sources/lever';
+import { ProgramathorSource } from './sources/programathor';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LinkedInAlertsSource } from './sources/linkedin-alerts';
 import { RemotarSource } from './sources/remotar';
@@ -77,6 +78,7 @@ export class DiscoveryService {
       new RemoteOkSource(),
       new RemotiveSource(),
       new BrazilPortalsSource(),
+      new ProgramathorSource(),
       // Por último: a ordem do array é prioridade de deduplicação, e o alerta
       // é o registro mais pobre de qualquer vaga que ele compartilhe — não
       // traz descrição. Se a mesma vaga vier do Greenhouse, a versão rica vence.
