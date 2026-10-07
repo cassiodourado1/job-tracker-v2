@@ -17,7 +17,6 @@ export const WATCHED_PLATFORMS = [
   'greenhouse',
   'lever',
   'ashby',
-  'squadra',
 ] as const;
 
 export type WatchedPlatform = (typeof WATCHED_PLATFORMS)[number];
@@ -35,7 +34,6 @@ export const WATCHED_PLATFORM_LABELS: Record<WatchedPlatform, string> = {
   greenhouse: 'Greenhouse',
   lever: 'Lever',
   ashby: 'Ashby',
-  squadra: 'site da Squadra',
 };
 
 /** Subdomínios da própria plataforma, que não são empresa nenhuma. */
@@ -112,10 +110,6 @@ export function watchedCompanyFromUrl(raw: string): WatchedCompany | null {
   // endereço do site acompanha a Lever, sem leitor próprio para quebrar.
   if (host === 'ciandt.com' || host.endsWith('.ciandt.com')) {
     return { platform: 'lever', slug: 'ciandt' };
-  }
-
-  if (host === 'squadra.com.br' || host.endsWith('.squadra.com.br')) {
-    return { platform: 'squadra', slug: 'squadra' };
   }
 
   return null;

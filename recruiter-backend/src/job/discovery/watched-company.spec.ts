@@ -10,7 +10,6 @@ describe('watchedCompanyFromUrl', () => {
     ['https://jobs.lever.co/acme', 'lever', 'acme'],
     ['https://jobs.ashbyhq.com/acme/abc', 'ashby', 'acme'],
     ['https://ciandt.com/br/pt-br/carreiras', 'lever', 'ciandt'],
-    ['https://www.squadra.com.br/vagas/', 'squadra', 'squadra'],
   ])('%s → %s', (url, platform, slug) => {
     expect(watchedCompanyFromUrl(url)).toEqual({ platform, slug });
   });
@@ -21,6 +20,8 @@ describe('watchedCompanyFromUrl', () => {
     ['https://api.inhire.app/job-posts'],
     ['https://boards.greenhouse.io/'],
     ['https://www.empresa-qualquer.com.br/carreiras'],
+    // Site próprio sem plataforma: ainda sem leitor, então não se reconhece.
+    ['https://www.squadra.com.br/vagas/'],
     ['não é endereço'],
     ['javascript:alert(1)'],
   ])('não reconhece %s', (url) => {
