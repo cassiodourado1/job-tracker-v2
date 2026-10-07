@@ -3,6 +3,7 @@ import type { JobSearchResult } from '@recruit/shared';
 import { fetchPublicPage } from '../../safe-fetch';
 import { jobPostingToResult, readJobPosting } from '../json-ld';
 import type { DiscoveryQuery, DiscoverySource } from '../provider';
+import { searchTermsFor } from '../provider';
 
 /**
  * Portais brasileiros sem API, lidos pelo JSON-LD da página da vaga.
@@ -50,9 +51,6 @@ const PORTALS: PortalConfig[] = [
   },
 ];
 
-/** Sem termo não há listagem: estes portais não têm "todas as vagas". */
-const DEFAULT_TERMS = ['desenvolvedor'];
-
 export class BrazilPortalsSource implements DiscoverySource {
   readonly name = 'portais-br';
 
@@ -67,7 +65,10 @@ export class BrazilPortalsSource implements DiscoverySource {
       return [];
     }
 
-    const term = query.q?.trim() || DEFAULT_TERMS[0];
+    // Só o primeiro termo: cada um custa uma listagem e doze páginas de vaga
+    // por portal, e esta já é a fonte mais lenta. Sem termo não há listagem,
+    // porque estes portais não têm "todas as vagas".
+    const [term] = searchTermsFor(query);
 
     const portals = await Promise.allSettled(
       PORTALS.map((portal) => this.readPortal(portal, term)),

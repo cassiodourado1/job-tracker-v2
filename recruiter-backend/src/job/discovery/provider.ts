@@ -1,4 +1,4 @@
-import type { JobSearchResult } from '@recruit/shared';
+import { DEFAULT_SEARCH_TERMS, type JobSearchResult } from '@recruit/shared';
 
 /**
  * Uma fonte de vagas.
@@ -31,10 +31,34 @@ export interface DiscoveryQuery {
   q?: string;
 
   /**
+   * Termos do perfil (`JobPreferences.searchTerms`), para quando a caixa de
+   * texto está vazia. Ver `searchTermsFor`.
+   */
+  terms?: string[];
+
+  /**
    * Busca ampliada: liga as fontes lentas, que leem portal página a página.
    * Opt-in porque custa segundos, não milissegundos.
    */
   expanded?: boolean;
+}
+
+/**
+ * Os termos que uma fonte por busca deve consultar.
+ *
+ * O texto digitado vence: quem escreveu "clojure" quer clojure, não os termos
+ * de sempre. Sem texto, valem os termos do perfil; sem eles, o padrão.
+ */
+export function searchTermsFor(query: DiscoveryQuery): string[] {
+  const typed = query.q?.trim();
+
+  if (typed) {
+    return [typed];
+  }
+
+  const own = (query.terms ?? []).map((term) => term.trim()).filter(Boolean);
+
+  return own.length > 0 ? own : DEFAULT_SEARCH_TERMS;
 }
 
 /**

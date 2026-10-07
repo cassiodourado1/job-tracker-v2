@@ -18,6 +18,7 @@ import { RemoteOkSource, RemotiveSource } from './sources/remote-boards';
 import { matches, matchesTerm } from './filters';
 import { fold } from './normalize';
 import type { DiscoveryQuery, DiscoverySource } from './provider';
+import { searchTermsFor } from './provider';
 import { scoreJob, sortKey } from './scoring';
 
 /**
@@ -88,10 +89,11 @@ export class DiscoveryService {
     excludedUrls: Set<string>;
     cursor?: string;
   }): Promise<DiscoverResult> {
-    const { items, failed, fetchMs } = await this.collect(
-      params.q,
-      params.expanded,
-    );
+    const { items, failed, fetchMs } = await this.collect({
+      q: params.q,
+      expanded: params.expanded,
+      terms: params.preferences.searchTerms,
+    });
 
     const eligible = items
       .filter((job) => matches(job, params.preferences))
@@ -136,10 +138,15 @@ export class DiscoveryService {
    * um nome na lista de falhas, e a tela mostra que a cobertura foi parcial em
    * vez de fingir que o acervo é aquele.
    */
-  private async collect(q?: string, expanded?: boolean): Promise<Collected> {
+  private async collect(query: DiscoveryQuery): Promise<Collected> {
     // A flag entra na chave: sem isso, marcar "ampliar" devolveria o resultado
-    // estreito que já estava em memória.
-    const key = `${expanded ? '+' : '-'}${fold(q ?? '')}`;
+    // estreito que já estava em memória. Os termos efetivos também: dois
+    // perfis com termos diferentes, ou o mesmo perfil depois de trocá-los,
+    // não podem receber o acervo um do outro.
+    const key = [
+      query.expanded ? '+' : '-',
+      ...searchTermsFor(query).map(fold),
+    ].join('|');
     const cached = this.cache.get(key);
 
     if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
@@ -149,7 +156,7 @@ export class DiscoveryService {
     const started = Date.now();
 
     const settled = await Promise.allSettled(
-      this.sources.map((source) => withDeadline(source, { q, expanded })),
+      this.sources.map((source) => withDeadline(source, query)),
     );
 
     const items: JobSearchResult[] = [];

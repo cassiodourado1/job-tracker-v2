@@ -10,7 +10,7 @@ import {
   toIsoDate,
 } from '../normalize';
 import type { DiscoveryQuery, DiscoverySource } from '../provider';
-import { parseEach } from '../provider';
+import { parseEach, searchTermsFor } from '../provider';
 
 /**
  * Gupy — a fonte que cobre o mercado brasileiro.
@@ -43,8 +43,8 @@ const MAX_PAGES = 5;
 /** Ritmo humano entre páginas do mesmo termo — §5. */
 const DELAY_MS = 250;
 
-/** Sem termo, a Gupy devolve o acervo inteiro — e a maioria não é vaga técnica. */
-const DEFAULT_TERMS = ['desenvolvedor', 'engenheiro de software', 'backend'];
+/** Termos lidos ao mesmo tempo. Com seis termos, são duas levas de três. */
+const TERM_CONCURRENCY = 3;
 
 /** Descrição truncada: o acervo inteiro fica em memória durante a rodada. */
 const MAX_DESCRIPTION = 4_000;
@@ -111,14 +111,24 @@ export class GupySource implements DiscoverySource {
   readonly deadlineMs = 30_000;
 
   async fetch(query: DiscoveryQuery): Promise<JobSearchResult[]> {
-    const terms = query.q?.trim() ? [query.q.trim()] : DEFAULT_TERMS;
+    // Sem termo, a Gupy devolve o acervo inteiro, e a maioria não é vaga
+    // técnica: `searchTermsFor` sempre devolve ao menos um.
+    const terms = searchTermsFor(query);
     const byUrl = new Map<string, JobSearchResult>();
 
-    // Termos em paralelo, páginas de cada termo em sequência: são no máximo
-    // três requisições simultâneas ao portal.
-    const perTerm = await Promise.allSettled(
-      terms.map((term) => this.readTerm(term)),
-    );
+    // Termos em levas de três, páginas de cada termo em sequência: nunca mais
+    // que três requisições simultâneas ao portal.
+    const perTerm: PromiseSettledResult<JobSearchResult[]>[] = [];
+
+    for (let start = 0; start < terms.length; start += TERM_CONCURRENCY) {
+      perTerm.push(
+        ...(await Promise.allSettled(
+          terms
+            .slice(start, start + TERM_CONCURRENCY)
+            .map((term) => this.readTerm(term)),
+        )),
+      );
+    }
 
     // Um termo que falha não derruba os outros. Só quando todos falham a
     // fonte inteira é dada como fora do ar.

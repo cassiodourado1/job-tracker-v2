@@ -158,3 +158,44 @@ describe('GupySource', () => {
     await expect(new GupySource().fetch({})).rejects.toThrow('layout mudou');
   });
 });
+
+describe('GupySource com os termos do perfil', () => {
+  beforeEach(() => {
+    jest.useFakeTimers({ advanceTimers: true });
+    fetchPage.mockReset();
+  });
+
+  afterEach(() => jest.useRealTimers());
+
+  it('busca cada termo do perfil', async () => {
+    fetchPage.mockResolvedValue(responde(pagina([])));
+
+    await new GupySource().fetch({ terms: ['front-end', 'drupal'] });
+
+    expect(fetchPage.mock.calls.map(([url]) => url)).toEqual([
+      'https://portal.gupy.io/job-search/term=front-end&page=1',
+      'https://portal.gupy.io/job-search/term=drupal&page=1',
+    ]);
+  });
+
+  it('nunca passa de três requisições simultâneas', async () => {
+    let abertas = 0;
+    let pico = 0;
+
+    fetchPage.mockImplementation(async () => {
+      abertas += 1;
+      pico = Math.max(pico, abertas);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      abertas -= 1;
+
+      return responde(pagina([]));
+    });
+
+    await new GupySource().fetch({
+      terms: ['a', 'b', 'c', 'd', 'e', 'f'],
+    });
+
+    expect(fetchPage).toHaveBeenCalledTimes(6);
+    expect(pico).toBe(3);
+  });
+});
