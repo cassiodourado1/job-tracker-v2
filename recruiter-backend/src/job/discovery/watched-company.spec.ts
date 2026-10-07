@@ -9,7 +9,7 @@ describe('watchedCompanyFromUrl', () => {
     ['https://job-boards.greenhouse.io/acme/jobs/1', 'greenhouse', 'acme'],
     ['https://jobs.lever.co/acme', 'lever', 'acme'],
     ['https://jobs.ashbyhq.com/acme/abc', 'ashby', 'acme'],
-    ['https://ciandt.com/br/pt-br/carreiras', 'ciandt', 'ciandt'],
+    ['https://ciandt.com/br/pt-br/carreiras', 'lever', 'ciandt'],
     ['https://www.squadra.com.br/vagas/', 'squadra', 'squadra'],
   ])('%s → %s', (url, platform, slug) => {
     expect(watchedCompanyFromUrl(url)).toEqual({ platform, slug });
