@@ -216,7 +216,6 @@ export function ResultCard({
               >
                 {result.title}
               </span>
-              <PostedAt postedAt={result.postedAt} source={result.source} />
             </div>
             <span
               className="shrink-0 rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
@@ -243,18 +242,24 @@ export function ResultCard({
             </p>
           )}
 
-          {/* mt-auto: as ações encostam no rodapé, então os cards da linha
-              terminam alinhados mesmo com conteúdos de tamanhos diferentes. */}
-          <div className="mt-auto flex flex-wrap items-center gap-2">
+          {/* mt-auto: data e ações encostam no rodapé, então os cards da linha
+              terminam alinhados mesmo com conteúdos de tamanhos diferentes. A
+              data é o penúltimo item, logo acima dos botões; sem data, o
+              empurrão para o rodapé fica com os botões. */}
+          <PostedAt postedAt={result.postedAt} source={result.source} />
+
+          <div
+            className={`${result.postedAt ? "" : "mt-auto "}flex flex-nowrap items-center gap-1.5`}
+          >
             {portalUrl && (
               <a
                 href={portalUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 rounded-lg border border-zinc-300 px-3 py-1.5 text-sm font-medium transition hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
+                className="flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-zinc-300 px-2.5 py-1.5 text-sm font-medium transition hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
               >
                 <IconExternalLink />
-                Ver no portal
+                Ver
               </a>
             )}
 
@@ -272,48 +277,53 @@ export function ResultCard({
                     : "Descartar — não aparece mais na busca"
                 }
                 aria-label="Descartar vaga"
-                className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-500 transition hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-900"
+                className="flex cursor-pointer items-center rounded-lg border border-zinc-300 px-2 py-1.5 text-sm font-medium text-zinc-500 transition hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-900"
               >
                 <IconX />
               </button>
             )}
 
+            {/* Os quatro numa linha só (flex-nowrap): Ver, descartar, "Já me
+                candidatei" como penúltimo, e salvar só com o ícone, por último.
+                Espaçamentos enxutos para caber no card da grade de 4 colunas. */}
             {applied ? (
               <Link
                 href="/"
-                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-emerald-700 underline underline-offset-4 transition hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950"
+                className="flex items-center whitespace-nowrap rounded-lg px-2.5 py-1.5 text-sm font-medium text-emerald-700 underline underline-offset-4 transition hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950"
               >
-                Candidatura registrada — acompanhar
+                Candidatura registrada
               </Link>
-            ) : saved ? (
+            ) : (
+              <button
+                type="button"
+                onClick={markApplied}
+                disabled={pending}
+                title="Já enviei a candidatura no site da empresa: salva a vaga e registra como aplicado, com a data de hoje"
+                className="cursor-pointer whitespace-nowrap rounded-lg border border-zinc-300 px-2.5 py-1.5 text-sm font-medium transition hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
+              >
+                Já me candidatei
+              </button>
+            )}
+
+            {saved ? (
               <Link
                 href="/vagas/salvas"
-                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-emerald-700 underline underline-offset-4 transition hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950"
+                title="Salva — ver em Minhas vagas"
+                aria-label="Vaga salva — ver em Minhas vagas"
+                className="flex items-center rounded-lg border border-zinc-900 bg-zinc-900 px-2 py-1.5 text-white transition hover:bg-zinc-700 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
               >
                 <IconBookmark />
-                Salva — ver em Minhas vagas
               </Link>
             ) : (
               <button
                 type="button"
                 onClick={save}
                 disabled={pending}
-                className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+                title="Salvar — vai para Minhas vagas"
+                aria-label="Salvar vaga"
+                className="flex cursor-pointer items-center rounded-lg border border-zinc-300 px-2 py-1.5 text-zinc-500 transition hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-900"
               >
                 <IconBookmark />
-                {pending ? "Salvando…" : "Salvar"}
-              </button>
-            )}
-
-            {!applied && (
-              <button
-                type="button"
-                onClick={markApplied}
-                disabled={pending}
-                title="Já enviei a candidatura no site da empresa: salva a vaga e registra como aplicado, com a data de hoje"
-                className="cursor-pointer rounded-lg border border-emerald-600/40 px-3 py-1.5 text-sm font-medium text-emerald-700 transition hover:bg-emerald-50 disabled:opacity-50 dark:text-emerald-400 dark:hover:bg-emerald-950"
-              >
-                Já me candidatei
               </button>
             )}
           </div>
@@ -406,7 +416,7 @@ function PostedAt({
 
   return (
     <span
-      className={`text-xs ${fresh ? "font-medium text-emerald-700 dark:text-emerald-400" : "text-zinc-500 dark:text-zinc-400"}`}
+      className={`mt-auto text-xs ${fresh ? "font-medium text-emerald-700 dark:text-emerald-400" : "text-zinc-500 dark:text-zinc-400"}`}
       title={date.toLocaleString("pt-BR", { dateStyle: "long", timeStyle: "short" })}
     >
       {verb} {relativeDays(days)}
