@@ -272,8 +272,17 @@ export async function fetchPublicPage(rawUrl: string): Promise<FetchedPage> {
  * Devolve `unknown` de propósito. Quem chama valida com Zod: JSON de terceiro
  * é dado externo, mesmo vindo de host conhecido (seção 5 do CLAUDE.md).
  */
-export async function fetchPublicJson(rawUrl: string): Promise<unknown> {
+export async function fetchPublicJson(
+  rawUrl: string,
+  /**
+   * Cabeçalhos a mais, para API que identifica o recurso por cabeçalho — a
+   * InHire diz de qual empresa é a página por `X-Tenant`. Somam-se aos
+   * padrão; não os substituem.
+   */
+  headers: Record<string, string> = {},
+): Promise<unknown> {
   const { body } = await fetchCapped(rawUrl, {
+    headers,
     accept: 'application/json',
     allowedContent: ['application/json'],
     maxBytes: MAX_JSON_BYTES,
@@ -288,6 +297,7 @@ export async function fetchPublicJson(rawUrl: string): Promise<unknown> {
 }
 
 interface FetchOptions {
+  headers?: Record<string, string>;
   accept: string;
   allowedContent: string[];
   maxBytes: number;
@@ -318,6 +328,7 @@ async function fetchCapped(
         redirect: 'manual',
         signal: AbortSignal.timeout(TIMEOUT_MS),
         headers: {
+          ...options.headers,
           // Sem cookies, sem credenciais, sem cabeçalho de origem.
           // ASCII puro: caractere acentuado aqui leva 403 de WAF — a Ashby
           // recusa a mesma requisição só por causa do cabeçalho. Medido.

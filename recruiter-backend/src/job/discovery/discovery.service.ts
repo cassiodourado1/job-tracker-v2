@@ -2,11 +2,13 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Env } from '../../config/env';
 import { watchlistFrom } from './watchlist';
-import type {
-  DiscoverResult,
-  JobPreferences,
-  JobSearchResult,
-  JobSort,
+import {
+  watchedCompanyFromUrl,
+  type DiscoverResult,
+  type JobPreferences,
+  type JobSearchResult,
+  type JobSort,
+  type WatchedCompany,
 } from '@recruit/shared';
 import { AshbySource } from './sources/ashby';
 import { BrazilPortalsSource } from './sources/br-portals';
@@ -18,6 +20,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { LinkedInAlertsSource } from './sources/linkedin-alerts';
 import { NerdinSource } from './sources/nerdin';
 import { RemotarSource } from './sources/remotar';
+import { CompanyPagesSource } from './sources/company-pages';
 import { RemoteOkSource, RemotiveSource } from './sources/remote-boards';
 import { matches, matchesTerm } from './filters';
 import { fold } from './normalize';
@@ -75,6 +78,9 @@ export class DiscoveryService {
       // decide qual versão fica. A da Gupy declara o contrato em campo
       // próprio; a da Remotar, por tag.
       new RemotarSource(),
+      // Depois da Gupy e da Remotar: a página da empresa repete vagas que a
+      // busca já trouxe, e a versão da busca vem com descrição.
+      new CompanyPagesSource(),
       new GreenhouseSource(watchlist.greenhouse),
       new AshbySource(watchlist.ashby),
       new LeverSource(watchlist.lever),
@@ -105,6 +111,7 @@ export class DiscoveryService {
       q: params.q,
       expanded: params.expanded,
       terms: params.preferences.searchTerms,
+      companies: watchedCompanies(params.preferences.companyPages),
     });
 
     const eligible = items
@@ -162,9 +169,15 @@ export class DiscoveryService {
     // estreito que já estava em memória. Os termos efetivos também: dois
     // perfis com termos diferentes, ou o mesmo perfil depois de trocá-los,
     // não podem receber o acervo um do outro.
+    // As empresas acompanhadas também: sem elas na chave, acrescentar uma
+    // empresa devolveria o acervo de antes até o cache vencer.
     const key = [
       query.expanded ? '+' : '-',
       ...searchTermsFor(query).map(fold),
+      '@',
+      ...(query.companies ?? []).map(
+        (company) => `${company.platform}:${company.slug}`,
+      ),
     ].join('|');
     const cached = this.cache.get(key);
 
@@ -237,4 +250,25 @@ async function withDeadline(
 
 function describe(reason: unknown): string {
   return reason instanceof Error ? reason.message : String(reason);
+}
+
+/**
+ * Os endereços colados viram empresas reconhecidas, sem repetir e em ordem
+ * estável — a ordem entra na chave do cache. Endereço que não se reconhece
+ * fica de fora: a tela já avisa isso na hora de colar.
+ */
+function watchedCompanies(pages: readonly string[]): WatchedCompany[] {
+  const byKey = new Map<string, WatchedCompany>();
+
+  for (const page of pages) {
+    const company = watchedCompanyFromUrl(page);
+
+    if (company) {
+      byKey.set(`${company.platform}:${company.slug}`, company);
+    }
+  }
+
+  return [...byKey.entries()]
+    .sort(([a], [b]) => (a < b ? -1 : 1))
+    .map(([, company]) => company);
 }

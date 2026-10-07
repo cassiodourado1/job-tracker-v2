@@ -10,8 +10,8 @@ import {
   toIsoDate,
   workModelFromText,
 } from '../normalize';
-import type { DiscoverySource } from '../provider';
-import { parseEach } from '../provider';
+import type { DiscoveryQuery, DiscoverySource } from '../provider';
+import { boardsFor, parseEach } from '../provider';
 
 /**
  * Greenhouse — board por empresa.
@@ -44,12 +44,15 @@ const greenhouseBoardSchema = z.object({ jobs: z.array(z.unknown()) });
 export class GreenhouseSource implements DiscoverySource {
   readonly name = 'greenhouse';
 
-  /** Os slugs vêm do `.env` — ver `watchlist.ts`. */
+  /**
+   * Os slugs do `.env` — ver `watchlist.ts`. A cada rodada somam-se as
+   * empresas que o perfil acompanha nesta plataforma.
+   */
   constructor(private readonly boards: readonly string[]) {}
 
-  async fetch(): Promise<JobSearchResult[]> {
+  async fetch(query: DiscoveryQuery = {}): Promise<JobSearchResult[]> {
     const boards = await Promise.allSettled(
-      this.boards.map(async (slug) => {
+      boardsFor(query, 'greenhouse', this.boards).map(async (slug) => {
         const payload = greenhouseBoardSchema.safeParse(
           await fetchPublicJson(
             `https://boards-api.greenhouse.io/v1/boards/${slug}/jobs?content=true`,

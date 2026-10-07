@@ -230,7 +230,7 @@ function toResult(raw: unknown): JobSearchResult | null {
   };
 }
 
-function workModelFromGupy(
+export function workModelFromGupy(
   workplaceType: string | null | undefined,
   isRemote: boolean | null | undefined,
 ): JobSearchResult['workModel'] {
