@@ -7,6 +7,7 @@ import {
   LINKEDIN_AGE_OPTIONS,
   LINKEDIN_MAX_AGE_LIMIT,
   LOCATION_SCOPES,
+  MAX_SEARCH_TERMS,
   SENIORITIES,
   STACK_LABELS,
   WORK_MODELS,
@@ -105,6 +106,43 @@ export function FiltersModal({
         </header>
 
         <div className="flex flex-col gap-6 overflow-y-auto px-5 py-5">
+          <Group
+            title="Termos de busca"
+            hint={`O que a Gupy e os portais brasileiros procuram quando a caixa de busca está vazia. Decide o que CHEGA: sem "front-end" aqui, vaga de front-end nem entra na lista. Até ${MAX_SEARCH_TERMS}.`}
+          >
+            <KeywordList
+              values={draft.searchTerms}
+              max={MAX_SEARCH_TERMS}
+              min={1}
+              placeholder="ex.: front-end"
+              onChange={(searchTerms) => patch({ searchTerms })}
+            />
+          </Group>
+
+          <Group
+            title="Título precisa conter"
+            hint="Uma destas basta. Corta o que chegou. Vazio = qualquer título."
+          >
+            <KeywordList
+              values={draft.titleIncludes}
+              max={30}
+              placeholder="ex.: frontend"
+              onChange={(titleIncludes) => patch({ titleIncludes })}
+            />
+          </Group>
+
+          <Group
+            title="Título não pode conter"
+            hint="Vence a lista acima: título com qualquer uma destas some."
+          >
+            <KeywordList
+              values={draft.titleExcludes}
+              max={30}
+              placeholder="ex.: estágio"
+              onChange={(titleExcludes) => patch({ titleExcludes })}
+            />
+          </Group>
+
           <Group
             title="Localização"
             hint="Marcar uma desmarca a outra."
@@ -314,6 +352,82 @@ function Chip({
     >
       {label}
     </button>
+  );
+}
+
+/**
+ * Lista de palavras editável: cada uma vira um chip removível, e Enter
+ * acrescenta a digitada.
+ *
+ * O schema limpa espaços e corta em 40 caracteres; aqui a tela só evita
+ * repetir palavra (sem diferenciar maiúscula) e respeita o mínimo e o máximo,
+ * para o "Aplicar" nunca esbarrar num 400 por algo que dava para impedir.
+ */
+function KeywordList({
+  values,
+  max,
+  min = 0,
+  placeholder,
+  onChange,
+}: {
+  values: string[];
+  max: number;
+  min?: number;
+  placeholder: string;
+  onChange: (values: string[]) => void;
+}) {
+  const [text, setText] = useState("");
+  const full = values.length >= max;
+
+  const add = () => {
+    const word = text.trim().slice(0, 40);
+
+    if (
+      word &&
+      !full &&
+      !values.some((value) => value.toLowerCase() === word.toLowerCase())
+    ) {
+      onChange([...values, word]);
+    }
+
+    setText("");
+  };
+
+  return (
+    <>
+      {values.map((value) => (
+        <span
+          key={value}
+          className="flex items-center gap-1 rounded-full border border-zinc-900 bg-zinc-900 py-1 pl-3 pr-1.5 text-xs font-medium text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
+        >
+          {value}
+          <button
+            type="button"
+            aria-label={`Remover ${value}`}
+            disabled={values.length <= min}
+            onClick={() => onChange(values.filter((item) => item !== value))}
+            className="cursor-pointer rounded-full px-1 leading-none opacity-70 transition hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-30"
+          >
+            ×
+          </button>
+        </span>
+      ))}
+      <input
+        value={text}
+        disabled={full}
+        placeholder={full ? `máximo de ${max}` : placeholder}
+        onChange={(event) => setText(event.target.value)}
+        onKeyDown={(event) => {
+          // Enter dentro do <dialog> não pode submeter nem fechar nada.
+          if (event.key === "Enter") {
+            event.preventDefault();
+            add();
+          }
+        }}
+        onBlur={add}
+        className="min-w-32 flex-1 rounded-full border border-dashed border-zinc-300 bg-transparent px-3 py-1 text-xs outline-none transition focus:border-zinc-900 disabled:opacity-50 dark:border-zinc-700 dark:focus:border-zinc-100"
+      />
+    </>
   );
 }
 
