@@ -146,6 +146,22 @@ describe('canonicalJobUrl · fontes existentes não regridem', () => {
     });
   });
 
+  it('InHire: o nome depois do id não muda a vaga', () => {
+    const id = '2047f9b7-31e2-4ea6-aca0-1e45909e80c7';
+
+    expect(
+      canonicalJobUrl(
+        `https://acme.inhire.app/vagas/${id}/pessoa-desenvolvedora-front-end?utm_source=remotar`,
+      ),
+    ).toBe(`https://acme.inhire.app/vagas/${id}`);
+    expect(canonicalJobUrl(`https://acme.inhire.app/vagas/${id}`)).toBe(
+      `https://acme.inhire.app/vagas/${id}`,
+    );
+    expect(canonicalJobUrl('https://acme.inhire.app/vagas')).toBe(
+      'https://acme.inhire.app/vagas',
+    );
+  });
+
   it('recusa o que não é http', () => {
     expect(canonicalJobUrl('javascript:alert(1)')).toBeNull();
     expect(canonicalJobUrl('não é url')).toBeNull();

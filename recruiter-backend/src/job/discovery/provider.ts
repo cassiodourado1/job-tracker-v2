@@ -1,4 +1,9 @@
-import { DEFAULT_SEARCH_TERMS, type JobSearchResult } from '@recruit/shared';
+import {
+  DEFAULT_SEARCH_TERMS,
+  type JobSearchResult,
+  type WatchedCompany,
+  type WatchedPlatform,
+} from '@recruit/shared';
 
 /**
  * Uma fonte de vagas.
@@ -37,10 +42,32 @@ export interface DiscoveryQuery {
   terms?: string[];
 
   /**
+   * Empresas acompanhadas pelo perfil, já reconhecidas a partir dos endereços
+   * em `JobPreferences.companyPages`. Ver `boardsFor`.
+   */
+  companies?: WatchedCompany[];
+
+  /**
    * Busca ampliada: liga as fontes lentas, que leem portal página a página.
    * Opt-in porque custa segundos, não milissegundos.
    */
   expanded?: boolean;
+}
+
+/**
+ * Os boards que uma fonte por empresa lê nesta rodada: os do `.env` somados
+ * aos que o perfil acompanha na plataforma dela, sem repetir.
+ */
+export function boardsFor(
+  query: DiscoveryQuery,
+  platform: WatchedPlatform,
+  fromEnv: readonly string[] = [],
+): string[] {
+  const fromProfile = (query.companies ?? [])
+    .filter((company) => company.platform === platform)
+    .map((company) => company.slug);
+
+  return [...new Set([...fromEnv, ...fromProfile])];
 }
 
 /**

@@ -16,6 +16,8 @@
  *               `/job/<token>`, em que o token é um JSON em base64 com o id
  *               da vaga E o canal de origem ("gupy_portal", "remotar"). A
  *               mesma vaga chega com tokens diferentes por canal.
+ *   InHire      `/vagas/<uuid>/<nome-da-vaga>` pela Remotar e `/vagas/<uuid>`
+ *               pela página da empresa: o nome no fim é enfeite.
  *   LinkedIn    /comm/jobs/view/123  vs  /jobs/view/123, `www.` vs `br.`,
  *               slug opcional antes do id, e oito parâmetros de rastreio
  */
@@ -80,9 +82,31 @@ export function canonicalJobUrl(rawUrl: string): string | null {
     }
   }
 
-  url.pathname = gupyJobPath(url.hostname, path) ?? path;
+  url.pathname =
+    gupyJobPath(url.hostname, path) ??
+    inhireJobPath(url.hostname, path) ??
+    path;
 
   return url.toString();
+}
+
+/**
+ * `/vagas/<uuid>/<nome>` da InHire reduzido a `/vagas/<uuid>`.
+ *
+ * A InHire identifica a vaga pelo uuid; o nome depois dele é só para leitura
+ * e muda quando a empresa reescreve o título. Sem cortar, a mesma vaga vinda
+ * da Remotar (com nome) e da página da empresa (sem nome) aparecia duas vezes.
+ */
+function inhireJobPath(hostname: string, path: string): string | null {
+  if (!hostname.endsWith('.inhire.app')) {
+    return null;
+  }
+
+  const id = path.match(
+    /^\/vagas\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:\/[^/]*)?$/i,
+  )?.[1];
+
+  return id ? `/vagas/${id.toLowerCase()}` : null;
 }
 
 /**

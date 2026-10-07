@@ -156,6 +156,12 @@ export const LINKEDIN_AGE_OPTIONS = [7, 14, 21, 30, 45] as const;
  * a rodada precisa caber no prazo da fonte.
  */
 export const MAX_SEARCH_TERMS = 6;
+
+/**
+ * Teto de empresas acompanhadas. Cada uma é uma requisição por rodada (duas
+ * nos sites próprios), e a rodada precisa caber no prazo das fontes.
+ */
+export const MAX_COMPANY_PAGES = 40;
 export const DEFAULT_SEARCH_TERMS = [
   'desenvolvedor',
   'engenheiro de software',
@@ -194,6 +200,17 @@ export const jobPreferencesSchema = z.object({
     .min(1)
     .max(MAX_SEARCH_TERMS)
     .default(DEFAULT_SEARCH_TERMS),
+  /**
+   * Páginas de vagas de empresas que você quer acompanhar — ver
+   * `watched-company.ts`. Guarda o endereço como você colou, e não a
+   * plataforma reconhecida: se o reconhecimento melhorar, o endereço antigo
+   * passa a ser lido sem você colar de novo. Com padrão, para as preferências
+   * gravadas antes deste campo continuarem válidas.
+   */
+  companyPages: z
+    .array(externalUrlSchema.max(300))
+    .max(MAX_COMPANY_PAGES)
+    .default([]),
 });
 
 export type JobPreferences = z.infer<typeof jobPreferencesSchema>;
@@ -255,6 +272,7 @@ export const defaultJobPreferences: JobPreferences = {
   ],
   linkedinMaxAgeDays: DEFAULT_LINKEDIN_MAX_AGE_DAYS,
   searchTerms: DEFAULT_SEARCH_TERMS,
+  companyPages: [],
 };
 
 /**

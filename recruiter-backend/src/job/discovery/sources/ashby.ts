@@ -8,8 +8,8 @@ import {
   stackFromText,
   toIsoDate,
 } from '../normalize';
-import type { DiscoverySource } from '../provider';
-import { parseEach } from '../provider';
+import type { DiscoveryQuery, DiscoverySource } from '../provider';
+import { boardsFor, parseEach } from '../provider';
 
 /**
  * Ashby — o formato mais bem estruturado das três fontes por empresa.
@@ -45,12 +45,15 @@ const ashbyBoardSchema = z.object({ jobs: z.array(z.unknown()) });
 export class AshbySource implements DiscoverySource {
   readonly name = 'ashby';
 
-  /** Os slugs vêm do `.env` — ver `watchlist.ts`. */
+  /**
+   * Os slugs do `.env` — ver `watchlist.ts`. A cada rodada somam-se as
+   * empresas que o perfil acompanha nesta plataforma.
+   */
   constructor(private readonly boards: readonly string[]) {}
 
-  async fetch(): Promise<JobSearchResult[]> {
+  async fetch(query: DiscoveryQuery = {}): Promise<JobSearchResult[]> {
     const boards = await Promise.allSettled(
-      this.boards.map(async (slug) => {
+      boardsFor(query, 'ashby', this.boards).map(async (slug) => {
         const payload = ashbyBoardSchema.safeParse(
           await fetchPublicJson(
             `https://api.ashbyhq.com/posting-api/job-board/${slug}`,
