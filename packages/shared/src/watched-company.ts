@@ -17,8 +17,6 @@ export const WATCHED_PLATFORMS = [
   'greenhouse',
   'lever',
   'ashby',
-  'ciandt',
-  'squadra',
 ] as const;
 
 export type WatchedPlatform = (typeof WATCHED_PLATFORMS)[number];
@@ -36,8 +34,6 @@ export const WATCHED_PLATFORM_LABELS: Record<WatchedPlatform, string> = {
   greenhouse: 'Greenhouse',
   lever: 'Lever',
   ashby: 'Ashby',
-  ciandt: 'site da CI&T',
-  squadra: 'site da Squadra',
 };
 
 /** Subdomínios da própria plataforma, que não são empresa nenhuma. */
@@ -109,12 +105,11 @@ export function watchedCompanyFromUrl(raw: string): WatchedCompany | null {
   const ashby = pathOf('jobs.ashbyhq.com');
   if (ashby) return { platform: 'ashby', slug: ashby };
 
+  // O site da CI&T só mostra as vagas que ela publica na Lever: medido em
+  // outubro de 2026, 198 vagas em `jobs.lever.co/ciandt`. Quem cola o
+  // endereço do site acompanha a Lever, sem leitor próprio para quebrar.
   if (host === 'ciandt.com' || host.endsWith('.ciandt.com')) {
-    return { platform: 'ciandt', slug: 'ciandt' };
-  }
-
-  if (host === 'squadra.com.br' || host.endsWith('.squadra.com.br')) {
-    return { platform: 'squadra', slug: 'squadra' };
+    return { platform: 'lever', slug: 'ciandt' };
   }
 
   return null;
