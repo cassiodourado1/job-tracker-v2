@@ -310,7 +310,7 @@ export function ResultCard({
                 href="/vagas/salvas"
                 title="Salva — ver em Minhas vagas"
                 aria-label="Vaga salva — ver em Minhas vagas"
-                className="flex items-center rounded-lg border border-emerald-600/40 px-2 py-1.5 text-emerald-700 transition hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950"
+                className="flex items-center rounded-lg border border-zinc-900 bg-zinc-900 px-2 py-1.5 text-white transition hover:bg-zinc-700 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
               >
                 <IconBookmark />
               </Link>
@@ -321,7 +321,7 @@ export function ResultCard({
                 disabled={pending}
                 title="Salvar — vai para Minhas vagas"
                 aria-label="Salvar vaga"
-                className="flex cursor-pointer items-center rounded-lg bg-zinc-900 px-2 py-1.5 text-white transition hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+                className="flex cursor-pointer items-center rounded-lg border border-zinc-300 px-2 py-1.5 text-zinc-500 transition hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-900"
               >
                 <IconBookmark />
               </button>
