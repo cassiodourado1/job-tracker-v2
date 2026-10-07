@@ -143,6 +143,25 @@ export const LINKEDIN_MAX_AGE_LIMIT = 45;
 export const DEFAULT_LINKEDIN_MAX_AGE_DAYS = 14;
 export const LINKEDIN_AGE_OPTIONS = [7, 14, 21, 30, 45] as const;
 
+/**
+ * O que as fontes POR BUSCA (Gupy e portais brasileiros) recebem como termo
+ * quando a caixa de texto está vazia.
+ *
+ * Diferente do `titleIncludes`, que corta o que já chegou: o termo decide o que
+ * CHEGA. A Gupy só devolve o que casa com a busca, então sem "front-end" aqui
+ * uma vaga de "Especialista Frontend" nunca entra na rodada, por mais aberto
+ * que esteja o filtro de título.
+ *
+ * Teto de seis porque cada termo custa páginas no portal (§5, ritmo humano), e
+ * a rodada precisa caber no prazo da fonte.
+ */
+export const MAX_SEARCH_TERMS = 6;
+export const DEFAULT_SEARCH_TERMS = [
+  'desenvolvedor',
+  'engenheiro de software',
+  'backend',
+];
+
 export const jobPreferencesSchema = z.object({
   /** `null` = tanto faz. */
   scope: locationScopeSchema.nullable(),
@@ -166,6 +185,15 @@ export const jobPreferencesSchema = z.object({
     .min(1)
     .max(LINKEDIN_MAX_AGE_LIMIT)
     .default(DEFAULT_LINKEDIN_MAX_AGE_DAYS),
+  /**
+   * Termos de busca das fontes por busca. Com padrão, como o campo acima,
+   * para as preferências gravadas antes dele continuarem válidas.
+   */
+  searchTerms: z
+    .array(keyword)
+    .min(1)
+    .max(MAX_SEARCH_TERMS)
+    .default(DEFAULT_SEARCH_TERMS),
 });
 
 export type JobPreferences = z.infer<typeof jobPreferencesSchema>;
@@ -226,6 +254,7 @@ export const defaultJobPreferences: JobPreferences = {
     'estagio',
   ],
   linkedinMaxAgeDays: DEFAULT_LINKEDIN_MAX_AGE_DAYS,
+  searchTerms: DEFAULT_SEARCH_TERMS,
 };
 
 /**
