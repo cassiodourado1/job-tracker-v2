@@ -11,3 +11,4 @@ export * from './metrics';
 export * from './profile';
 export * from './resume';
 export * from './status-event';
+export * from './watched-company';

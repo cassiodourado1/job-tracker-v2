@@ -24,6 +24,7 @@ function preferences(over: Partial<JobPreferences> = {}): JobPreferences {
     titleExcludes: [],
     linkedinMaxAgeDays: 14,
     searchTerms: ['desenvolvedor'],
+    companyPages: [],
     ...over,
   };
 }
