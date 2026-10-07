@@ -10,5 +10,6 @@ export * from './loopback';
 export * from './metrics';
 export * from './profile';
 export * from './resume';
+export * from './resume-import';
 export * from './status-event';
 export * from './watched-company';

@@ -4,12 +4,14 @@ import {
   profileDetailSchema,
   profileListSchema,
   profileSchema,
+  resumeImportResultSchema,
   updateProfileSchema,
 } from "@recruit/shared";
 import type {
   CreateProfileInput,
   Profile,
   ProfileDetail,
+  ResumeImportResult,
   UpdateProfileInput,
 } from "@recruit/shared";
 import { env } from "@/lib/env";
@@ -86,6 +88,22 @@ export async function updateProfile(
     await request(`/profiles/${id}`, {
       method: "PATCH",
       body: JSON.stringify(updateProfileSchema.parse(input)),
+    }),
+  );
+}
+
+/**
+ * Texto do currículo → currículo organizado, para revisão. O servidor tira
+ * os dados pessoais antes de mandar ao modelo; nada é gravado.
+ */
+export async function importResumeText(
+  id: string,
+  text: string,
+): Promise<ResumeImportResult> {
+  return resumeImportResultSchema.parse(
+    await request(`/profiles/${id}/resume/import`, {
+      method: "POST",
+      body: JSON.stringify({ text }),
     }),
   );
 }
