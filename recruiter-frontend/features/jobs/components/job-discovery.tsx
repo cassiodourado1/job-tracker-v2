@@ -239,8 +239,7 @@ export function JobDiscovery({
               <Counter items={items.length} total={total} />
             </div>
             <p className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
-              Enquanto ligada, traz vagas de Gupy, Remotar, Nerdin,
-              Programathor, Greenhouse, Ashby, Lever e agregadores de remoto.
+              Enquanto ligada, traz vagas de portais, agregadores e empresas.
               Nada é gravado até você salvar.
               {expanded && (
                 <>
@@ -267,30 +266,6 @@ export function JobDiscovery({
                 </span>
               )}
             </button>
-
-            {/* Ordem diferente: a lista recomeça do topo. Reordenar só o que
-                já está na tela misturaria a ordem nova com lotes que vieram
-                na antiga, e o cursor seguinte não casaria com nenhuma. */}
-            <label className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-300">
-              Ordenar
-              <select
-                value={sort}
-                onChange={(event) => {
-                  setSort(event.target.value as JobSort);
-                  setItems([]);
-                  setTotal(null);
-                  setExhausted(null);
-                  cursor.current = null;
-                }}
-                className="cursor-pointer rounded-lg border border-zinc-300 bg-transparent px-2 py-2 text-sm font-medium text-zinc-900 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-900"
-              >
-                {JOB_SORTS.map((option) => (
-                  <option key={option} value={option} className="text-zinc-900">
-                    {SORT_LABELS[option]}
-                  </option>
-                ))}
-              </select>
-            </label>
 
             {/* Acervo diferente: alternar zera a lista, senão o começo viria
                 da busca estreita e o resto da ampliada. */}
@@ -350,6 +325,30 @@ export function JobDiscovery({
           >
             Filtrar
           </button>
+
+          {/* Ordem diferente: a lista recomeça do topo. Reordenar só o que
+              já está na tela misturaria a ordem nova com lotes que vieram
+              na antiga, e o cursor seguinte não casaria com nenhuma. */}
+          <label className="flex shrink-0 items-center gap-2 text-xs text-zinc-600 dark:text-zinc-300">
+            Ordenar
+            <select
+              value={sort}
+              onChange={(event) => {
+                setSort(event.target.value as JobSort);
+                setItems([]);
+                setTotal(null);
+                setExhausted(null);
+                cursor.current = null;
+              }}
+              className="cursor-pointer rounded-lg border border-zinc-300 bg-transparent px-2 py-2 text-sm font-medium text-zinc-900 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-900"
+            >
+              {JOB_SORTS.map((option) => (
+                <option key={option} value={option} className="text-zinc-900">
+                  {SORT_LABELS[option]}
+                </option>
+              ))}
+            </select>
+          </label>
         </form>
 
         <Status
