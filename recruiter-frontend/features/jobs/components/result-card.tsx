@@ -54,6 +54,7 @@ const SOURCE_LABELS: Record<string, string> = {
   remotive: "Remotive",
   remotar: "Remotar",
   programathor: "Programathor",
+  nerdin: "Nerdin",
   "portais-br": "portais BR",
 };
 
