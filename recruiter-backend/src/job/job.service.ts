@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  DEFAULT_JOB_SORT,
   defaultJobPreferences,
   jobPreferencesSchema,
   resumeSchema,
@@ -12,6 +13,7 @@ import {
   type DismissJobInput,
   type Job,
   type JobSearchResult,
+  type JobSort,
   type SaveJobInput,
   type SavedJob,
   type UndismissJobInput,
@@ -42,6 +44,7 @@ export class JobService {
     cursor?: string;
     q?: string;
     expanded?: boolean;
+    sort?: JobSort;
   }): Promise<DiscoverResult> {
     const profile = await this.prisma.profile.findUnique({
       where: { id: params.profileId },
@@ -69,9 +72,14 @@ export class JobService {
         : defaultJobPreferences,
       excludedUrls: await this.resolvedUrls(params.profileId),
       cursor: params.cursor,
+      sort: params.sort ?? DEFAULT_JOB_SORT,
     });
 
-    await this.recordSeen(params.profileId, result.items);
+    // Os anúncios agrupados também foram mostrados: estão listados no card.
+    await this.recordSeen(
+      params.profileId,
+      result.items.flatMap((item) => [item, ...item.others]),
+    );
 
     return result;
   }
@@ -91,7 +99,7 @@ export class JobService {
    */
   private async recordSeen(
     profileId: string,
-    items: JobSearchResult[],
+    items: Pick<JobSearchResult, 'url' | 'source'>[],
   ): Promise<void> {
     if (items.length === 0) {
       return;
@@ -348,7 +356,7 @@ function toJobDto(row: JobModel): Job {
  */
 export function toSeenRows(
   profileId: string,
-  items: JobSearchResult[],
+  items: Pick<JobSearchResult, 'url' | 'source'>[],
 ): { profileId: string; url: string; source: string }[] {
   const seen = new Set<string>();
   const rows: { profileId: string; url: string; source: string }[] = [];

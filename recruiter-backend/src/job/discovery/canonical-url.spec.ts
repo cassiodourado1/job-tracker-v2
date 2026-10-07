@@ -100,6 +100,52 @@ describe('canonicalJobUrl · fontes existentes não regridem', () => {
     ).toBe('https://jobs.ashbyhq.com/acme/abc');
   });
 
+  describe('Gupy por canal', () => {
+    // Tokens SINTÉTICOS com a forma real: base64 de {"jobId":…,"source":…}.
+    const token = (payload: object) =>
+      Buffer.from(JSON.stringify(payload)).toString('base64');
+
+    it('a mesma vaga vinda da Gupy e da Remotar vira uma URL só', () => {
+      const viaPortal = `https://acme.gupy.io/job/${token({ jobId: 1234567, source: 'gupy_portal' }).replace(/=+$/, '')}?jobBoardSource=gupy_portal`;
+      const viaRemotar = `https://acme.gupy.io/job/${token({ jobId: 1234567, source: 'remotar' })}?jobBoardSource=remotar`;
+
+      expect(canonicalJobUrl(viaPortal)).toBe(
+        'https://acme.gupy.io/jobs/1234567',
+      );
+      expect(canonicalJobUrl(viaRemotar)).toBe(canonicalJobUrl(viaPortal));
+    });
+
+    it('vagas diferentes continuam diferentes', () => {
+      expect(
+        canonicalJobUrl(
+          `https://acme.gupy.io/job/${token({ jobId: 1, source: 'x' })}`,
+        ),
+      ).not.toBe(
+        canonicalJobUrl(
+          `https://acme.gupy.io/job/${token({ jobId: 2, source: 'x' })}`,
+        ),
+      );
+    });
+
+    it('mantém o endereço clássico e o token que não decodifica', () => {
+      expect(canonicalJobUrl('https://acme.gupy.io/jobs/1234567')).toBe(
+        'https://acme.gupy.io/jobs/1234567',
+      );
+      expect(canonicalJobUrl('https://acme.gupy.io/job/naoebase64')).toBe(
+        'https://acme.gupy.io/job/naoebase64',
+      );
+      expect(
+        canonicalJobUrl(`https://acme.gupy.io/job/${token({ source: 'x' })}`),
+      ).toBe(`https://acme.gupy.io/job/${token({ source: 'x' })}`);
+    });
+
+    it('só mexe em host da Gupy', () => {
+      const other = `https://acme.example.com/job/${token({ jobId: 9 })}`;
+
+      expect(canonicalJobUrl(other)).toBe(other);
+    });
+  });
+
   it('recusa o que não é http', () => {
     expect(canonicalJobUrl('javascript:alert(1)')).toBeNull();
     expect(canonicalJobUrl('não é url')).toBeNull();

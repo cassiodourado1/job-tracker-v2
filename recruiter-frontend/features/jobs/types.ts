@@ -1,6 +1,12 @@
-import type { Job, JobSearchResult, SavedJob } from "@recruit/shared";
+import type {
+  DiscoveredJob,
+  Job,
+  JobSearchResult,
+  JobVariant,
+  SavedJob,
+} from "@recruit/shared";
 
-export type { Job, JobSearchResult, SavedJob };
+export type { DiscoveredJob, Job, JobSearchResult, JobVariant, SavedJob };
 
 export type JobActionState =
   | { status: "idle" }

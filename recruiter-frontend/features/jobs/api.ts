@@ -12,6 +12,7 @@ import type {
   FillReport,
   Job,
   JobSearchResult,
+  JobSort,
   SavedJob,
 } from "@recruit/shared";
 import { env } from "@/lib/env";
@@ -62,9 +63,11 @@ export async function discoverJobs(params: {
   cursor?: string;
   q?: string;
   expanded?: boolean;
+  sort?: JobSort;
 }): Promise<DiscoverResult> {
   const search = new URLSearchParams({ profileId: params.profileId });
 
+  if (params.sort) search.set("sort", params.sort);
   if (params.cursor) search.set("cursor", params.cursor);
   if (params.q) search.set("q", params.q);
   // Só quando ligado: z.coerce.boolean() trata "false" como verdadeiro, então

@@ -6,19 +6,24 @@ import type {
   DiscoverResult,
   JobPreferences,
   JobSearchResult,
+  JobSort,
 } from '@recruit/shared';
 import { AshbySource } from './sources/ashby';
 import { BrazilPortalsSource } from './sources/br-portals';
 import { GreenhouseSource } from './sources/greenhouse';
 import { GupySource } from './sources/gupy';
 import { LeverSource } from './sources/lever';
+import { ProgramathorSource } from './sources/programathor';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LinkedInAlertsSource } from './sources/linkedin-alerts';
+import { NerdinSource } from './sources/nerdin';
+import { RemotarSource } from './sources/remotar';
 import { RemoteOkSource, RemotiveSource } from './sources/remote-boards';
 import { matches, matchesTerm } from './filters';
 import { fold } from './normalize';
 import type { DiscoveryQuery, DiscoverySource } from './provider';
 import { searchTermsFor } from './provider';
+import { groupSameJob, sameJobKey } from './grouping';
 import { scoreJob, sortKey } from './scoring';
 
 /**
@@ -66,12 +71,18 @@ export class DiscoveryService {
 
     this.sources = [
       new GupySource(),
+      // Logo depois da Gupy: a Remotar repassa vaga dela, e a ordem do array
+      // decide qual versão fica. A da Gupy declara o contrato em campo
+      // próprio; a da Remotar, por tag.
+      new RemotarSource(),
       new GreenhouseSource(watchlist.greenhouse),
       new AshbySource(watchlist.ashby),
       new LeverSource(watchlist.lever),
       new RemoteOkSource(),
       new RemotiveSource(),
       new BrazilPortalsSource(),
+      new ProgramathorSource(),
+      new NerdinSource(),
       // Por último: a ordem do array é prioridade de deduplicação, e o alerta
       // é o registro mais pobre de qualquer vaga que ele compartilhe — não
       // traz descrição. Se a mesma vaga vier do Greenhouse, a versão rica vence.
@@ -88,6 +99,7 @@ export class DiscoveryService {
     preferences: JobPreferences;
     excludedUrls: Set<string>;
     cursor?: string;
+    sort?: JobSort;
   }): Promise<DiscoverResult> {
     const { items, failed, fetchMs } = await this.collect({
       q: params.q,
@@ -102,12 +114,18 @@ export class DiscoveryService {
     const ranked = eligible
       .map((job) => ({
         job,
-        key: sortKey(job, scoreJob(job, params.skills, params.preferences)),
+        key: sortKey(
+          job,
+          scoreJob(job, params.skills, params.preferences),
+          params.sort,
+        ),
       }))
       .sort((a, b) => (a.key < b.key ? -1 : 1));
 
-    const unseen = ranked.filter(
-      ({ job }) => !params.excludedUrls.has(job.url),
+    // Agrupar depois de tirar o resolvido: descartado o anúncio da frente, o
+    // seguinte assume o card. A chave do cursor é a do anúncio que encabeça.
+    const unseen = groupSameJob(
+      ranked.filter(({ job }) => !params.excludedUrls.has(job.url)),
     );
 
     // Chave ordenável, e não deslocamento: o usuário descarta vagas entre uma
@@ -123,7 +141,8 @@ export class DiscoveryService {
     return {
       items: page.map(({ job }) => job),
       nextCursor: after.length > page.length && last ? last.key : null,
-      total: eligible.length,
+      // Cards, não URLs: nove anúncios da mesma vaga são uma vaga na tela.
+      total: new Set(eligible.map(sameJobKey)).size,
       exhausted:
         page.length > 0 ? null : eligible.length > 0 ? 'nada-novo' : 'fim',
       failedSources: failed,

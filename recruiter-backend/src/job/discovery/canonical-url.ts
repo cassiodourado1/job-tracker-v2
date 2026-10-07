@@ -12,7 +12,10 @@
  *               e um `?gh_src=` grudado no fim
  *   Lever       hostedUrl  vs  applyUrl (= hostedUrl + "/apply")
  *   Ashby       jobUrl     vs  applyUrl (= jobUrl + "/application")
- *   Gupy        `?jobBoardSource=gupy_portal` no fim de todas
+ *   Gupy        `?jobBoardSource=gupy_portal` no fim de todas, e o caminho
+ *               `/job/<token>`, em que o token é um JSON em base64 com o id
+ *               da vaga E o canal de origem ("gupy_portal", "remotar"). A
+ *               mesma vaga chega com tokens diferentes por canal.
  *   LinkedIn    /comm/jobs/view/123  vs  /jobs/view/123, `www.` vs `br.`,
  *               slug opcional antes do id, e oito parâmetros de rastreio
  */
@@ -77,7 +80,49 @@ export function canonicalJobUrl(rawUrl: string): string | null {
     }
   }
 
-  url.pathname = path;
+  url.pathname = gupyJobPath(url.hostname, path) ?? path;
 
   return url.toString();
+}
+
+/**
+ * `/job/<token>` da Gupy reduzido a `/jobs/<id>`.
+ *
+ * O token decodificado é `{"jobId":12678997,"source":"remotar"}`: o id é a
+ * vaga, o `source` é quem mandou você até ela. A Remotar repassa vaga da Gupy
+ * com o próprio `source`, e sem esta regra a mesma vaga aparecia duas vezes —
+ * uma por canal — e descartar uma não escondia a outra.
+ *
+ * `/jobs/<id>` não é invenção: é o endereço clássico das páginas de carreira
+ * da Gupy, e abre a mesma vaga (verificado em outubro de 2026).
+ *
+ * Token que não decodifica para um id numérico fica como está: vale mais uma
+ * duplicata eventual que duas vagas colapsadas numa identidade só.
+ */
+function gupyJobPath(hostname: string, path: string): string | null {
+  if (!hostname.endsWith('.gupy.io')) {
+    return null;
+  }
+
+  const token = path.match(/^\/job\/([A-Za-z0-9+_-]+=*)$/)?.[1];
+
+  if (!token) {
+    return null;
+  }
+
+  try {
+    const decoded: unknown = JSON.parse(
+      Buffer.from(token, 'base64').toString('utf8'),
+    );
+    const jobId =
+      decoded && typeof decoded === 'object' && 'jobId' in decoded
+        ? decoded.jobId
+        : null;
+
+    return typeof jobId === 'number' && Number.isInteger(jobId) && jobId > 0
+      ? `/jobs/${jobId}`
+      : null;
+  } catch {
+    return null;
+  }
 }
