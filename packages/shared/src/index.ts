@@ -3,6 +3,7 @@ export * from './application-status';
 export * from './email';
 export * from './job';
 export * from './job-extraction';
+export * from './job-fit';
 export * from './form-fill';
 export * from './form-answer';
 export * from './job-preferences';
