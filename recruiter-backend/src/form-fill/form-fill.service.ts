@@ -14,7 +14,10 @@ import {
   type Page,
 } from 'playwright-core';
 import { assertReachable, FetchError } from '../job/safe-fetch';
+import { ConfigService } from '@nestjs/config';
+import type { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
+import { chooseBrowser } from './browser';
 import { buildFieldPlan, NEVER_FILL, type PlannedField } from './field-plan';
 
 /**
@@ -82,7 +85,10 @@ export class FormFillService {
    */
   private context: BrowserContext | null = null;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly config: ConfigService<Env, true>,
+  ) {}
 
   async fill(profileId: string, rawUrl: string): Promise<FillReport> {
     const url = navigableUrl(rawUrl);
@@ -220,11 +226,25 @@ export class FormFillService {
       }
     }
 
+    const browser = chooseBrowser({
+      override: this.config.get('FORM_FILL_BROWSER_PATH', { infer: true }),
+    });
+
+    if (!browser) {
+      throw new ServiceUnavailableException({
+        error: 'Service Unavailable',
+        message:
+          'Não achei um navegador para preencher o formulário. Instale o Chrome, Brave, Edge ou Chromium, ou informe o caminho em FORM_FILL_BROWSER_PATH no .env do backend.',
+      });
+    }
+
     try {
       const context = await chromium.launchPersistentContext(PROFILE_DIR, {
-        // Chrome do sistema, não o Chromium do Playwright: evita 300 MB de
-        // download numa máquina que já tem navegador.
-        channel: 'chrome',
+        // Navegador do sistema, não o Chromium do Playwright: evita 300 MB de
+        // download numa máquina que já tem navegador. Chrome pelo canal; os
+        // outros (Brave, Edge…) pelo caminho do executável.
+        channel: browser.channel,
+        executablePath: browser.executablePath,
         headless: false,
         viewport: null,
         // Sem isto o Chrome pode abrir diálogo de primeira execução ou de
@@ -240,9 +260,13 @@ export class FormFillService {
 
       return context;
     } catch (error) {
+      // O erro do Playwright é longo e técnico; fica no log. A tela recebe o
+      // que fazer.
+      this.logger.error(`Falha ao abrir ${browser.name}: ${describe(error)}`);
+
       throw new ServiceUnavailableException({
         error: 'Service Unavailable',
-        message: `Não consegui abrir o navegador: ${describe(error)}`,
+        message: `Não consegui abrir o ${browser.name}. Se ficou uma janela de preenchimento aberta de antes, feche-a e tente de novo.`,
       });
     }
   }

@@ -45,7 +45,8 @@ você pede, e o que ele propõe passa pelo seu clique antes de virar dado.
 
 - **Node.js 20.9 ou mais novo** e npm
 - **Docker**, para o Postgres
-- **Google Chrome**, só se for usar o preenchimento de formulário
+- **Um navegador baseado em Chromium** (Chrome, Brave, Edge, Chromium ou
+  Vivaldi), só se for usar o preenchimento de formulário
 - Opcional: uma **chave da API da Anthropic** com crédito, e uma **conta do
   Gmail** para a leitura de emails
 
@@ -211,8 +212,18 @@ presenciais no exterior enche a fila com o que você não procura.
 
 ### Preenchimento de formulário
 
-Usa o Google Chrome instalado na máquina, com um perfil próprio guardado em
-`~/.local/share/job-tracker/`, fora da pasta do projeto. Se a plataforma
+Usa um navegador baseado em Chromium já instalado na máquina: o app procura
+Chrome, Brave, Edge, Chromium e Vivaldi nos lugares de instalação padrão, nessa
+ordem. Se o seu estiver em outro lugar, informe o caminho do executável:
+
+```env
+FORM_FILL_BROWSER_PATH=/caminho/para/o/navegador
+```
+
+Firefox e Safari não servem: o Playwright não controla as versões
+instaladas deles. O navegador abre com um perfil próprio, guardado em
+`~/.local/share/job-tracker/`, fora da pasta do projeto — suas abas e logins
+do dia a dia não são tocados. Se a plataforma
 pedir login, faça pelo próprio Chrome que abrir; a sessão fica salva nesse
 perfil. O app preenche nome, email, telefone e links, deixa em branco o que não
 reconhece e **nunca envia**: você revisa e clica em enviar.

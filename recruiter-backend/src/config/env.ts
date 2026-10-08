@@ -73,6 +73,12 @@ export const envSchema = z.object({
   IMAP_USER: optionalString,
   IMAP_PASSWORD: optionalString,
   /**
+   * Navegador do preenchimento de formulário, quando não está no lugar
+   * padrão. Sem isto, o app procura Chrome, Brave, Edge, Chromium e Vivaldi
+   * nos caminhos de instalação comuns — ver `form-fill/browser.ts`.
+   */
+  FORM_FILL_BROWSER_PATH: optionalString,
+  /**
    * O rótulo do Gmail que o app lê. Rótulo é pasta no IMAP.
    *
    * Ler um rótulo dedicado em vez da INBOX faz o "nunca mandar a caixa inteira
