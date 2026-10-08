@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { AnswerPanel } from "@/features/answers";
+import { FitPanel } from "@/features/job-fit";
 import { ApiError } from "@/features/jobs/api";
 import { JobDetail, getJob } from "@/features/jobs";
 import type { Job } from "@/features/jobs";
@@ -34,7 +35,8 @@ export default async function VagaPage({
       {/* As perguntas usam o currículo do perfil: sem perfil escolhido, o
           gate do layout já mostra o seletor por cima. */}
       {profile && (
-        <div className="mx-auto w-full max-w-3xl">
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+          <FitPanel profileId={profile.id} jobId={job.id} />
           <AnswerPanel profileId={profile.id} jobId={job.id} />
         </div>
       )}
