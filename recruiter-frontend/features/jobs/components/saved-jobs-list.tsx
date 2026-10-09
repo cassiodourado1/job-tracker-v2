@@ -153,23 +153,18 @@ function SavedCard({
             </p>
           )}
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Link
-              href={`/vagas/${job.id}`}
-              className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm font-medium transition hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
-            >
-              Detalhes
-            </Link>
-
+          {/* Numa linha só, no padrão do card da busca: o título já leva aos
+              detalhes, então "Detalhes" saiu da fila de botões. */}
+          <div className="mt-auto flex flex-nowrap items-center gap-1.5">
             {portalUrl && (
               <a
                 href={portalUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 rounded-lg border border-zinc-300 px-3 py-1.5 text-sm font-medium transition hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
+                className="flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-zinc-300 px-2.5 py-1.5 text-sm font-medium transition hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
               >
                 <IconExternalLink />
-                Ver no portal
+                Ver
               </a>
             )}
 
@@ -183,9 +178,10 @@ function SavedCard({
                     setFill(await fillFormAction(profileId, portalUrl));
                   })
                 }
-                className="cursor-pointer rounded-lg border border-zinc-300 px-3 py-1.5 text-sm font-medium transition hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
+                title="Abre a vaga no navegador e preenche nome, email, telefone e links — nunca envia"
+                className="cursor-pointer whitespace-nowrap rounded-lg border border-zinc-300 px-2.5 py-1.5 text-sm font-medium transition hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
               >
-                {pending ? "Abrindo…" : "Preencher formulário"}
+                {pending ? "Abrindo…" : "Preencher"}
               </button>
             )}
 
@@ -195,7 +191,7 @@ function SavedCard({
             {application ? (
               <Link
                 href="/"
-                className="rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+                className="whitespace-nowrap rounded-lg bg-zinc-900 px-2.5 py-1.5 text-sm font-medium text-white transition hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
               >
                 Acompanhar candidatura
               </Link>
@@ -204,7 +200,7 @@ function SavedCard({
                 type="button"
                 disabled={pending}
                 onClick={() => run(() => applyToJobAction(profileId, job.id))}
-                className="cursor-pointer rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+                className="cursor-pointer whitespace-nowrap rounded-lg border border-zinc-300 px-2.5 py-1.5 text-sm font-medium transition hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
               >
                 {pending ? "Registrando…" : "Já me candidatei"}
               </button>
