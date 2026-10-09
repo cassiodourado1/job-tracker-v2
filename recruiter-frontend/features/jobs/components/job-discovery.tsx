@@ -20,12 +20,11 @@ import {
   ResultCard,
   type SearchResultItem,
 } from "@/features/jobs/components/result-card";
-import { SearchTimer, format } from "@/features/jobs/components/search-timer";
 import type { DiscoveredJob } from "@/features/jobs/types";
 import { saveProfileAction } from "@/features/profile/actions";
 
 /**
- * A busca em estilo fila de partida: liga, e as vagas vão chegando.
+ * "Buscar" traz o primeiro lote; os seguintes chegam conforme você rola.
  *
  * O ritmo NÃO vem de relógio. Medido, buscar em todas as fontes leva ~3s na
  * primeira vez e sai da memória depois — um laço por tempo despejaria as 800
@@ -44,12 +43,6 @@ interface JobDiscoveryProps {
 /** Trava contra laço infinito se o cursor parar de avançar por um defeito. */
 const MAX_BATCHES = 25;
 
-interface RunStats {
-  batches: number;
-  fetchMs: number;
-  elapsedMs: number;
-}
-
 export function JobDiscovery({
   profileId,
   query,
@@ -65,8 +58,6 @@ export function JobDiscovery({
   const [total, setTotal] = useState<number | null>(null);
   const [failed, setFailed] = useState<string[]>([]);
   const [demand, setDemand] = useState(0);
-  const [startedAt, setStartedAt] = useState<number | null>(null);
-  const [lastRun, setLastRun] = useState<RunStats | null>(null);
 
   const [expanded, setExpanded] = useState(false);
   const [sort, setSort] = useState<JobSort>(DEFAULT_JOB_SORT);
@@ -79,37 +70,24 @@ export function JobDiscovery({
   // despejo que a pausa por rolagem existe para evitar.
   const cursor = useRef<string | null>(null);
   const batches = useRef(0);
-  const fetchMs = useRef(0);
-  const began = useRef<number | null>(null);
   const runId = useRef(0);
   const sentinel = useRef<HTMLDivElement>(null);
   const saved = useRef(new Set(savedUrls));
 
   // Derivado, e não um state próprio: chamar setState dentro do efeito dispara
   // render em cascata (react-hooks/set-state-in-effect). Um lote está em voo
-  // enquanto houver mais pedidos do que lotes concluídos.
+  // enquanto houver mais pedidos do que lotes concluídos. É o único momento em
+  // que há rede trabalhando, e o único em que a tela mostra carregamento.
   const pending = running && demand > completed;
 
   const askForMore = useCallback(() => setDemand((value) => value + 1), []);
 
-  /** Para e registra a corrida — o cronômetro zera, o número sobrevive. */
-  const stop = useCallback(() => {
-    setRunning(false);
-    setStartedAt(null);
+  // `running` não é "buscando": é "ainda há lote para pedir". Parado de rolar,
+  // nada acontece na rede. Por isso não há botão de parar nem cronômetro —
+  // eles contavam um tempo em que nada estava sendo buscado.
+  const stop = useCallback(() => setRunning(false), []);
 
-    if (began.current !== null) {
-      setLastRun({
-        batches: batches.current,
-        fetchMs: fetchMs.current,
-        elapsedMs: Date.now() - began.current,
-      });
-      began.current = null;
-    }
-  }, []);
-
-  // Cada "Iniciar busca" recomeça do zero: limpa os cards e o cursor. Antes
-  // ele continuava de onde a busca anterior tinha parado, com a lista velha
-  // na tela e só o cronômetro andando — parecia que nada acontecia.
+  // Cada "Buscar" recomeça do zero: limpa os cards e o cursor.
   const start = useCallback(() => {
     setError(null);
     setExhausted(null);
@@ -117,10 +95,7 @@ export function JobDiscovery({
     setTotal(null);
     cursor.current = null;
     setRunning(true);
-    began.current = Date.now();
-    setStartedAt(began.current);
     batches.current = 0;
-    fetchMs.current = 0;
     askForMore();
   }, [askForMore]);
 
@@ -187,7 +162,6 @@ export function JobDiscovery({
       const result = outcome.result;
 
       batches.current += 1;
-      fetchMs.current += result.fetchMs;
       cursor.current = result.nextCursor;
       setTotal(result.total);
       setFailed(result.failedSources);
@@ -247,8 +221,8 @@ export function JobDiscovery({
               {query && <SearchFilterNotice query={query} />}
             </div>
             <p className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
-              Enquanto ligada, traz vagas de portais, agregadores e empresas.
-              Nada é gravado até você salvar.
+              Traz vagas de portais, agregadores e empresas; mais vagas chegam
+              conforme você rola. Nada é gravado até você salvar.
               {expanded && (
                 <>
                   {" "}
@@ -295,25 +269,17 @@ export function JobDiscovery({
 
             <button
               type="button"
-              onClick={running ? stop : start}
-              aria-pressed={running}
-              className={`flex cursor-pointer items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition ${
-                running
-                  ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                  : "bg-gradient-to-r from-accent to-accent-2 text-zinc-950 shadow-[0_8px_30px_-8px] shadow-accent/70 hover:brightness-110"
-              }`}
+              onClick={start}
+              disabled={pending}
+              aria-busy={pending}
+              className="flex cursor-pointer items-center gap-2 rounded-lg bg-gradient-to-r from-accent to-accent-2 px-4 py-2 text-sm font-medium text-zinc-950 shadow-[0_8px_30px_-8px] shadow-accent/70 transition hover:brightness-110 disabled:cursor-wait disabled:opacity-80"
             >
-              <span
-                className={`size-2 rounded-full ${
-                  running
-                    ? "animate-pulse bg-white"
-                    : "bg-zinc-950/60"
-                }`}
-              />
-              {running ? "Parar busca" : "Iniciar busca"}
-              {running && startedAt !== null && (
-                <SearchTimer key={startedAt} startedAt={startedAt} />
+              {pending ? (
+                <Spinner />
+              ) : (
+                <span className="size-2 rounded-full bg-zinc-950/60" />
               )}
+              {pending ? "Buscando…" : "Buscar"}
             </button>
           </div>
         </div>
@@ -359,12 +325,7 @@ export function JobDiscovery({
           </label>
         </form>
 
-        <Status
-          exhausted={exhausted}
-          failed={failed}
-          error={error}
-          lastRun={lastRun}
-        />
+        <Status exhausted={exhausted} failed={failed} error={error} />
       </section>
 
       <div className="max-w-4xl">
@@ -387,13 +348,27 @@ export function JobDiscovery({
 
       {/* Enquanto o primeiro lote não chega, cards de carregamento no lugar
           dos resultados: a primeira busca consulta os portais e leva uns
-          segundos. */}
-      {items.length === 0 && running && !error && <LoadingGrid />}
+          segundos. Nos lotes seguintes, uma linha deles no fim da lista. */}
+      {items.length === 0 && running && !error && (
+        <LoadingGrid label="Consultando os portais…" count={8} />
+      )}
+      {items.length > 0 && pending && (
+        <LoadingGrid label="Carregando mais vagas…" count={4} />
+      )}
 
       {items.length === 0 && !running && (
         <p className="cine-glass rounded-2xl px-6 py-14 text-center text-sm text-zinc-400">
-          Inicie a busca para começar.
+          Clique em Buscar para começar.
         </p>
+      )}
+
+      {/* Barra no topo da tela: com a lista rolada, o botão e os cards de
+          carregamento podem estar fora de vista. */}
+      {pending && (
+        <div
+          aria-hidden
+          className="fixed inset-x-0 top-0 z-50 h-1 animate-pulse bg-gradient-to-r from-accent to-accent-2"
+        />
       )}
 
       <div ref={sentinel} aria-hidden className="h-px" />
@@ -409,15 +384,29 @@ export function JobDiscovery({
   );
 }
 
+/** Girando no botão enquanto um lote está em voo. */
+function Spinner() {
+  return (
+    <span
+      aria-hidden
+      className="size-3.5 animate-spin rounded-full border-2 border-zinc-950/30 border-t-zinc-950"
+    />
+  );
+}
+
 /** Cards vazios pulsando, no formato dos cards de vaga, enquanto a busca roda. */
-function LoadingGrid() {
+function LoadingGrid({ label, count }: { label: string; count: number }) {
   return (
     <div role="status" aria-live="polite" className="flex flex-col gap-3">
-      <span className="text-sm text-zinc-500 dark:text-zinc-400">
-        Consultando os portais…
+      <span className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
+        <span
+          aria-hidden
+          className="size-3.5 animate-spin rounded-full border-2 border-zinc-400/40 border-t-zinc-500 dark:border-t-zinc-300"
+        />
+        {label}
       </span>
       <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {Array.from({ length: 8 }, (_, index) => (
+        {Array.from({ length: count }, (_, index) => (
           <li
             key={index}
             aria-hidden
@@ -500,12 +489,10 @@ function Status({
   exhausted,
   failed,
   error,
-  lastRun,
 }: {
   exhausted: Exhaustion | null;
   failed: string[];
   error: string | null;
-  lastRun: RunStats | null;
 }) {
   if (error) {
     return (
@@ -529,15 +516,6 @@ function Status({
       {exhausted === "nada-novo" && (
         <span className="text-zinc-700 dark:text-zinc-300">
           Você já viu todas as vagas disponíveis. Nada novo por enquanto.
-        </span>
-      )}
-
-      {/* O cronômetro zera ao parar; o número da corrida sobrevive aqui. */}
-      {lastRun && (
-        <span>
-          Última busca: {format(lastRun.elapsedMs)} ligada · {lastRun.batches}{" "}
-          {lastRun.batches === 1 ? "lote" : "lotes"} ·{" "}
-          {(lastRun.fetchMs / 1000).toFixed(1)}s de rede
         </span>
       )}
 
