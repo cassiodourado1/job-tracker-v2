@@ -23,6 +23,7 @@ function preferences(over: Partial<JobPreferences> = {}): JobPreferences {
     titleIncludes: [],
     titleExcludes: [],
     linkedinMaxAgeDays: 14,
+    hideUndeclaredWorkModel: false,
     searchTerms: ['desenvolvedor'],
     companyPages: [],
     ...over,
@@ -170,5 +171,37 @@ describe('títulos com o filtro padrão', () => {
     ['Analista Financeiro'],
   ])('continua descartando "%s"', (title) => {
     expect(matches(titled(title), defaultJobPreferences)).toBe(false);
+  });
+});
+
+describe('modalidade', () => {
+  function comModalidade(workModel: JobSearchResult['workModel']) {
+    return { ...job(null), workModel };
+  }
+
+  it('sem a opção, vaga que não informa continua passando', () => {
+    expect(
+      matches(comModalidade(null), preferences({ workModels: ['remoto'] })),
+    ).toBe(true);
+  });
+
+  it('com a opção, "Remoto" vira remoto confirmado', () => {
+    const estrito = preferences({
+      workModels: ['remoto'],
+      hideUndeclaredWorkModel: true,
+    });
+
+    expect(matches(comModalidade(null), estrito)).toBe(false);
+    expect(matches(comModalidade('remoto'), estrito)).toBe(true);
+    expect(matches(comModalidade('presencial'), estrito)).toBe(false);
+  });
+
+  it('a opção não corta nada sem modalidade marcada', () => {
+    expect(
+      matches(
+        comModalidade(null),
+        preferences({ hideUndeclaredWorkModel: true }),
+      ),
+    ).toBe(true);
   });
 });

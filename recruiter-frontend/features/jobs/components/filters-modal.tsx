@@ -179,7 +179,7 @@ export function FiltersModal({
             ))}
           </Group>
 
-          <Group title="Modalidade" hint="Vaga que não declarou continua aparecendo.">
+          <Group title="Modalidade" hint="A modalidade vem da fonte ou do título da vaga. Vaga que não informa continua aparecendo, a menos que você marque abaixo.">
             <AllChip
               label="todas"
               active={draft.workModels.length === 0}
@@ -195,6 +195,18 @@ export function FiltersModal({
                 }
               />
             ))}
+            <label className="mt-1 flex w-full cursor-pointer items-center gap-2 text-xs text-zinc-600 dark:text-zinc-300">
+              <input
+                type="checkbox"
+                checked={draft.hideUndeclaredWorkModel}
+                disabled={draft.workModels.length === 0}
+                onChange={(event) =>
+                  patch({ hideUndeclaredWorkModel: event.target.checked })
+                }
+                className="size-4 cursor-pointer accent-zinc-900 disabled:cursor-not-allowed disabled:opacity-40 dark:accent-zinc-100"
+              />
+              Esconder vagas que não informam a modalidade
+            </label>
           </Group>
 
           <Group

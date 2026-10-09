@@ -66,10 +66,14 @@ export function matches(
     return false;
   }
 
+  // Vaga sem modalidade passa, a não ser que você peça o contrário: com
+  // `hideUndeclaredWorkModel`, "Remoto" passa a querer dizer remoto
+  // confirmado.
   if (
-    job.workModel !== null &&
     preferences.workModels.length > 0 &&
-    !preferences.workModels.includes(job.workModel)
+    (job.workModel === null
+      ? preferences.hideUndeclaredWorkModel
+      : !preferences.workModels.includes(job.workModel))
   ) {
     return false;
   }

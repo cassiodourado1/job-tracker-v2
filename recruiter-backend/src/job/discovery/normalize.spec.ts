@@ -1,6 +1,7 @@
 import { STACK_LABELS } from '@recruit/shared';
 import {
   contractTypeFromLabel,
+  workModelFromTitle,
   countryFromText,
   STACK_VOCABULARY,
   stackFromText,
@@ -149,5 +150,26 @@ describe('contractTypeFromLabel', () => {
   it('não chuta terceirizado nem banco de talentos', () => {
     expect(contractTypeFromLabel('vacancy_type_outsource')).toBeNull();
     expect(contractTypeFromLabel('vacancy_type_talent_pool')).toBeNull();
+  });
+});
+
+describe('workModelFromTitle', () => {
+  it.each([
+    ['DESENVOLVEDOR(A) FULL STACK - Presencial', 'presencial'],
+    ['Desenvolvedor .Net Presencial - Bom Retiro', 'presencial'],
+    ['Front-end Sênior (Remoto)', 'remoto'],
+    ['Junior/Pleno Front-End Engineer - Remote', 'remoto'],
+    ['Dev Vue - Home Office', 'remoto'],
+    ['Analista de Sistemas Híbrido', 'hibrido'],
+  ])('%s → %s', (title, expected) => {
+    expect(workModelFromTitle(title)).toBe(expected);
+  });
+
+  it.each([
+    ['Desenvolvedor Full Stack Presencial ou Híbrido'],
+    ['Desenvolvedor Full Stack'],
+    ['Remote-first company, vaga presencial'],
+  ])('não chuta em "%s"', (title) => {
+    expect(workModelFromTitle(title)).toBeNull();
   });
 });

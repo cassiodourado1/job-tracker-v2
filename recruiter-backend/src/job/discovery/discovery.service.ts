@@ -23,7 +23,7 @@ import { RemotarSource } from './sources/remotar';
 import { CompanyPagesSource } from './sources/company-pages';
 import { RemoteOkSource, RemotiveSource } from './sources/remote-boards';
 import { matches, matchesTerm } from './filters';
-import { fold } from './normalize';
+import { fold, workModelFromTitle } from './normalize';
 import type { DiscoveryQuery, DiscoverySource } from './provider';
 import { searchTermsFor } from './provider';
 import { groupSameJob, sameJobKey } from './grouping';
@@ -215,7 +215,13 @@ export class DiscoveryService {
         }
 
         byUrl.add(job.url);
-        items.push(job);
+        // Fonte que não declara a modalidade às vezes a escreve no título;
+        // sem isto, "Desenvolvedor - Presencial" passava no filtro "Remoto".
+        items.push(
+          job.workModel === null
+            ? { ...job, workModel: workModelFromTitle(job.title) }
+            : job,
+        );
       }
     });
 

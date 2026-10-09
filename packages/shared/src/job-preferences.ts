@@ -185,6 +185,13 @@ export const jobPreferencesSchema = z.object({
    * aberta por construção. Com padrão, para as preferências gravadas antes
    * deste campo continuarem válidas.
    */
+  /**
+   * Com uma modalidade marcada, esconde também a vaga que não informa a
+   * modalidade. Desligado por padrão: muita fonte não declara, e cortar em
+   * silêncio esconde vaga boa. Ligado, "Remoto" vira "remoto confirmado".
+   * Com padrão, para as preferências gravadas antes dele continuarem válidas.
+   */
+  hideUndeclaredWorkModel: z.boolean().default(false),
   linkedinMaxAgeDays: z
     .number()
     .int()
@@ -271,6 +278,7 @@ export const defaultJobPreferences: JobPreferences = {
     'estagio',
   ],
   linkedinMaxAgeDays: DEFAULT_LINKEDIN_MAX_AGE_DAYS,
+  hideUndeclaredWorkModel: false,
   searchTerms: DEFAULT_SEARCH_TERMS,
   companyPages: [],
 };
