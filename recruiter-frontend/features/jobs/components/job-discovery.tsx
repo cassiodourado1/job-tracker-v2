@@ -107,9 +107,15 @@ export function JobDiscovery({
     }
   }, []);
 
+  // Cada "Iniciar busca" recomeça do zero: limpa os cards e o cursor. Antes
+  // ele continuava de onde a busca anterior tinha parado, com a lista velha
+  // na tela e só o cronômetro andando — parecia que nada acontecia.
   const start = useCallback(() => {
     setError(null);
     setExhausted(null);
+    setItems([]);
+    setTotal(null);
+    cursor.current = null;
     setRunning(true);
     began.current = Date.now();
     setStartedAt(began.current);
@@ -354,8 +360,6 @@ export function JobDiscovery({
         </form>
 
         <Status
-          items={items.length}
-          pending={pending}
           exhausted={exhausted}
           failed={failed}
           error={error}
@@ -381,6 +385,11 @@ export function JobDiscovery({
         </ul>
       )}
 
+      {/* Enquanto o primeiro lote não chega, cards de carregamento no lugar
+          dos resultados: a primeira busca consulta os portais e leva uns
+          segundos. */}
+      {items.length === 0 && running && !error && <LoadingGrid />}
+
       {items.length === 0 && !running && (
         <p className="cine-glass rounded-2xl px-6 py-14 text-center text-sm text-zinc-400">
           Inicie a busca para começar.
@@ -396,6 +405,34 @@ export function JobDiscovery({
         onCancel={() => setFiltersOpen(false)}
         onConfirm={applyFilters}
       />
+    </div>
+  );
+}
+
+/** Cards vazios pulsando, no formato dos cards de vaga, enquanto a busca roda. */
+function LoadingGrid() {
+  return (
+    <div role="status" aria-live="polite" className="flex flex-col gap-3">
+      <span className="text-sm text-zinc-500 dark:text-zinc-400">
+        Consultando os portais…
+      </span>
+      <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {Array.from({ length: 8 }, (_, index) => (
+          <li
+            key={index}
+            aria-hidden
+            className="cine-glass flex h-56 animate-pulse flex-col gap-3 rounded-2xl p-5"
+          >
+            <span className="h-4 w-1/2 rounded bg-zinc-300/40 dark:bg-zinc-700/60" />
+            <span className="h-3 w-3/4 rounded bg-zinc-300/30 dark:bg-zinc-700/40" />
+            <span className="mt-2 flex gap-2">
+              <span className="h-5 w-16 rounded-full bg-zinc-300/30 dark:bg-zinc-700/40" />
+              <span className="h-5 w-14 rounded-full bg-zinc-300/30 dark:bg-zinc-700/40" />
+            </span>
+            <span className="mt-auto h-8 w-full rounded-lg bg-zinc-300/30 dark:bg-zinc-700/40" />
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -460,15 +497,11 @@ function SearchFilterNotice({ query }: { query: string }) {
 }
 
 function Status({
-  items,
-  pending,
   exhausted,
   failed,
   error,
   lastRun,
 }: {
-  items: number;
-  pending: boolean;
   exhausted: Exhaustion | null;
   failed: string[];
   error: string | null;
@@ -484,7 +517,6 @@ function Status({
 
   return (
     <div className="flex flex-col gap-1 text-xs text-zinc-500 dark:text-zinc-400">
-      {pending && items === 0 && <span>Consultando os portais…</span>}
 
       {/* As duas mensagens são diferentes de propósito: uma pede para afrouxar
           o filtro, a outra diz que você está em dia. */}
