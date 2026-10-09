@@ -129,6 +129,31 @@ export function countryFromText(text: string | null): string | null {
 }
 
 /**
+ * Modalidade escrita no título, para a fonte que não a declara em campo
+ * próprio: "Desenvolvedor .NET - Presencial", "Front-end (Remoto)".
+ *
+ * Diferente de `workModelFromText`, que lê a LOCALIZAÇÃO e deixa a primeira
+ * pista vencer: no título, só quando ele aponta UMA modalidade. "Presencial ou Híbrido" e
+ * parecidos ficam `null`: chutar uma delas faria a vaga entrar ou sumir do
+ * filtro errado. E nunca sobrescreve o que a fonte declarou.
+ */
+const WORK_MODEL_HINTS: { pattern: RegExp; model: WorkModel }[] = [
+  {
+    pattern: /\bremot[oa]\b|\bremote\b|home[ -]?office|100% remoto/,
+    model: 'remoto',
+  },
+  { pattern: /\bh[i]brid[oa]\b|\bhybrid\b/, model: 'hibrido' },
+  { pattern: /\bpresencial\b|\bon-?site\b/, model: 'presencial' },
+];
+
+export function workModelFromTitle(title: string): WorkModel | null {
+  const value = fold(title);
+  const found = WORK_MODEL_HINTS.filter(({ pattern }) => pattern.test(value));
+
+  return found.length === 1 ? found[0].model : null;
+}
+
+/**
  * Senioridade a partir do título — nenhuma fonte declara este campo.
  *
  * A ordem importa: "Senior Staff Engineer" é staff, e testar `senior` antes
