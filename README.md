@@ -94,9 +94,10 @@ Abra **http://127.0.0.1:3000**.
    candidaturas.
 2. **Preencha o currículo** em *Currículo*. Dá para importar de um **PDF**
    (precisa da chave da Anthropic; veja abaixo o que é enviado) ou do arquivo
-   de dados que o LinkedIn exporta (*Configurações → Privacidade de dados →
-   Obter uma cópia dos seus dados*). Nos dois casos o formulário é preenchido
-   para você revisar, e nada é gravado até você salvar.
+   de dados que o LinkedIn exporta (*Configurações → Privacidade dos dados →
+   Baixe seus dados*, primeira opção — o pacote menor, só com "Perfil", não
+   traz cargos nem formação). Nos dois casos o formulário é preenchido para
+   você revisar, e nada é gravado até você salvar.
 3. **Procure vagas** em *Vagas*. Em *Filtros* ficam os **termos de busca**
    (o que os portais procuram — sem "front-end" ali, vaga de front-end nem
    chega), o título, a modalidade, o contrato e as **empresas acompanhadas**.

@@ -177,7 +177,16 @@ export function ResumeForm({ profile }: { profile: ProfileDetail }) {
         onImported={applyResumeImport}
       />
 
-      <LinkedInImportCard onImported={applyImport} />
+      {/* O LinkedIn fica recolhido: depende de pedir o arquivo por lá e
+          esperar o email. O PDF, acima, é o caminho de um clique. */}
+      <details className="group rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700">
+        <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-zinc-600 transition hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100">
+          Outras formas de importar: arquivo de dados do LinkedIn
+        </summary>
+        <div className="px-4 pb-4">
+          <LinkedInImportCard onImported={applyImport} />
+        </div>
+      </details>
 
       <section className="flex flex-col gap-3 border-t border-zinc-200 pt-6 dark:border-zinc-800">
         <h2 className="text-sm font-semibold">Dados pessoais</h2>

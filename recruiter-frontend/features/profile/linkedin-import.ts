@@ -58,7 +58,7 @@ export async function parseLinkedInExport(file: File): Promise<ImportOutcome> {
     });
   } catch {
     throw new ImportError(
-      "Não consegui abrir o arquivo. Envie o ZIP que o LinkedIn gera em Configurações → Privacidade de dados → Obter uma cópia dos seus dados.",
+      "Não consegui abrir o arquivo. Envie o ZIP que o LinkedIn gera em Configurações → Privacidade dos dados → Baixe seus dados (primeira opção, o arquivo maior).",
     );
   }
 

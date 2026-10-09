@@ -35,11 +35,13 @@ export function LinkedInImportCard({
       <div className="flex flex-col gap-1">
         <h2 className="text-sm font-semibold">Importar do LinkedIn</h2>
         <p className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
-          No LinkedIn: <strong>Configurações → Privacidade de dados → Obter
-          uma cópia dos seus dados</strong>. Escolha o arquivo .zip que eles
-          enviam. Ele é lido aqui e descartado — nada é enviado para fora nem
-          salvo em disco, e o formulário abaixo é preenchido para você revisar
-          antes de gravar.
+          No LinkedIn: <strong>Configurações → Privacidade dos dados → Baixe
+          seus dados</strong> e escolha a <strong>primeira opção</strong>, o
+          arquivo de dados maior. O pacote menor, só com “Perfil”, não traz
+          cargos, formação nem competências. O LinkedIn manda o .zip por email
+          (pode levar até um dia). Ele é lido aqui e descartado — nada é
+          enviado para fora nem salvo em disco, e o formulário abaixo é
+          preenchido para você revisar antes de gravar.
         </p>
       </div>
 
