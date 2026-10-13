@@ -1,4 +1,7 @@
+import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 
 /**
  * Qual navegador abrir para o preenchimento de formulário.
@@ -9,6 +12,15 @@ import { existsSync } from 'node:fs';
  *
  * O navegador abre com um perfil PRÓPRIO, fora da pasta do projeto: não
  * mexe nas abas nem nos logins do navegador do dia a dia.
+ *
+ * O padrão do sistema vem primeiro, quando é um destes: quem usa Brave não
+ * espera ver o Chrome abrir só porque ele também está instalado. Safari e
+ * Firefox não servem (o Playwright conduz só Chromium aqui), e aí vale a
+ * ordem da lista.
+ *
+ * Por último, o Chromium do próprio Playwright, quando instalado: é a saída
+ * de quem só tem Firefox ou Safari, em qualquer sistema, com um comando
+ * (`npx playwright-core install chromium`).
  */
 
 export interface BrowserChoice {
@@ -22,6 +34,11 @@ export interface BrowserChoice {
 interface Candidate {
   name: string;
   paths: Partial<Record<NodeJS.Platform, string[]>>;
+  /**
+   * Como o sistema chama este navegador quando ele é o padrão: bundle id no
+   * macOS, arquivo .desktop no Linux, ProgId no Windows. Em minúsculas.
+   */
+  ids: string[];
 }
 
 /**
@@ -31,6 +48,7 @@ interface Candidate {
 const CANDIDATES: Candidate[] = [
   {
     name: 'Google Chrome',
+    ids: ['com.google.chrome', 'google-chrome.desktop', 'chromehtml'],
     paths: {
       darwin: ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'],
       linux: ['/usr/bin/google-chrome', '/usr/bin/google-chrome-stable'],
@@ -39,6 +57,7 @@ const CANDIDATES: Candidate[] = [
   },
   {
     name: 'Brave',
+    ids: ['com.brave.browser', 'brave-browser.desktop', 'bravehtml'],
     paths: {
       darwin: ['/Applications/Brave Browser.app/Contents/MacOS/Brave Browser'],
       linux: ['/usr/bin/brave-browser', '/usr/bin/brave'],
@@ -49,6 +68,7 @@ const CANDIDATES: Candidate[] = [
   },
   {
     name: 'Microsoft Edge',
+    ids: ['com.microsoft.edgemac', 'microsoft-edge.desktop', 'msedgehtm'],
     paths: {
       darwin: [
         '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
@@ -61,6 +81,11 @@ const CANDIDATES: Candidate[] = [
   },
   {
     name: 'Chromium',
+    ids: [
+      'org.chromium.chromium',
+      'chromium.desktop',
+      'chromium-browser.desktop',
+    ],
     paths: {
       darwin: ['/Applications/Chromium.app/Contents/MacOS/Chromium'],
       linux: ['/usr/bin/chromium', '/usr/bin/chromium-browser'],
@@ -68,6 +93,7 @@ const CANDIDATES: Candidate[] = [
   },
   {
     name: 'Vivaldi',
+    ids: ['com.vivaldi.vivaldi', 'vivaldi-stable.desktop'],
     paths: {
       darwin: ['/Applications/Vivaldi.app/Contents/MacOS/Vivaldi'],
       linux: ['/usr/bin/vivaldi'],
@@ -79,13 +105,17 @@ const CANDIDATES: Candidate[] = [
  * O navegador a abrir, ou `null` se não há nenhum.
  *
  * `override` (FORM_FILL_BROWSER_PATH no .env) vence tudo: é a saída para
- * navegador instalado fora do lugar padrão.
+ * navegador instalado fora do lugar padrão. Depois vem o navegador padrão do
+ * sistema (`defaultId`, de `detectDefaultBrowser`), se for um da lista.
  */
 export function chooseBrowser(
   options: {
     override?: string;
     platform?: NodeJS.Platform;
     exists?: (path: string) => boolean;
+    defaultId?: string | null;
+    /** Onde o Playwright instala o Chromium dele (`chromium.executablePath()`). */
+    bundledPath?: string;
   } = {},
 ): BrowserChoice | null {
   const exists = options.exists ?? existsSync;
@@ -97,7 +127,15 @@ export function chooseBrowser(
       : null;
   }
 
-  for (const candidate of CANDIDATES) {
+  const defaultId = options.defaultId?.toLowerCase();
+  const ordered = defaultId
+    ? [
+        ...CANDIDATES.filter((item) => item.ids.includes(defaultId)),
+        ...CANDIDATES.filter((item) => !item.ids.includes(defaultId)),
+      ]
+    : CANDIDATES;
+
+  for (const candidate of ordered) {
     const path = (candidate.paths[platform] ?? []).find((item) => exists(item));
 
     if (path) {
@@ -107,5 +145,84 @@ export function chooseBrowser(
     }
   }
 
+  if (options.bundledPath && exists(options.bundledPath)) {
+    return {
+      name: 'Chromium do Playwright',
+      executablePath: options.bundledPath,
+    };
+  }
+
   return null;
+}
+
+/**
+ * Como o sistema chama o navegador padrão, ou `null` se não deu para saber.
+ *
+ * Melhor esforço: cada sistema guarda isso num lugar, e qualquer falha (sem
+ * o comando, formato inesperado, demora) cai na ordem da lista, que é o que
+ * acontecia antes.
+ */
+export function detectDefaultBrowser(
+  platform: NodeJS.Platform = process.platform,
+): string | null {
+  try {
+    if (platform === 'darwin') {
+      const plist = join(
+        homedir(),
+        'Library/Preferences/com.apple.LaunchServices/com.apple.launchservices.secure.plist',
+      );
+
+      return defaultFromLaunchServices(
+        run('plutil', ['-convert', 'json', '-o', '-', plist]),
+      );
+    }
+
+    if (platform === 'linux') {
+      return run('xdg-settings', ['get', 'default-web-browser']).trim() || null;
+    }
+
+    if (platform === 'win32') {
+      return defaultFromRegistry(
+        run('reg', [
+          'query',
+          'HKCU\\Software\\Microsoft\\Windows\\Shell\\Associations\\UrlAssociations\\https\\UserChoice',
+          '/v',
+          'ProgId',
+        ]),
+      );
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+/** O app que abre `https` nas preferências do LaunchServices, em JSON. */
+export function defaultFromLaunchServices(json: string): string | null {
+  const data = JSON.parse(json) as {
+    LSHandlers?: { LSHandlerURLScheme?: string; LSHandlerRoleAll?: string }[];
+  };
+  const handler = data.LSHandlers?.find(
+    (item) => item.LSHandlerURLScheme === 'https',
+  );
+
+  return handler?.LSHandlerRoleAll ?? null;
+}
+
+/**
+ * O ProgId da saída do `reg query` ("ChromeHTML", "MSEdgeHTM"). Sem
+ * conferência num Windows real: se o nome não casar com a lista, vale a
+ * ordem dela, como antes.
+ */
+export function defaultFromRegistry(output: string): string | null {
+  return /ProgId\s+REG_SZ\s+(\S+)/i.exec(output)?.[1] ?? null;
+}
+
+function run(command: string, args: string[]): string {
+  return execFileSync(command, args, {
+    encoding: 'utf8',
+    timeout: 2000,
+    stdio: ['ignore', 'pipe', 'ignore'],
+  });
 }

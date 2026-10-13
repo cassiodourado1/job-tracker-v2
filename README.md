@@ -218,19 +218,31 @@ presenciais no exterior enche a fila com o que você não procura.
 
 ### Preenchimento de formulário
 
-Usa um navegador baseado em Chromium já instalado na máquina: o app procura
-Chrome, Brave, Edge, Chromium e Vivaldi nos lugares de instalação padrão, nessa
-ordem. Se o seu estiver em outro lugar, informe o caminho do executável:
+Usa um navegador baseado em Chromium já instalado na máquina, nesta ordem:
+
+1. o caminho em `FORM_FILL_BROWSER_PATH`, se você informar;
+2. o seu navegador padrão (macOS, Linux ou Windows), se for Chrome, Brave,
+   Edge, Chromium ou Vivaldi;
+3. o primeiro desses que estiver instalado no lugar padrão;
+4. o Chromium do próprio Playwright, se você o instalou.
 
 ```env
 FORM_FILL_BROWSER_PATH=/caminho/para/o/navegador
 ```
 
 Firefox e Safari não servem: o Playwright não controla as versões
-instaladas deles. O navegador abre com um perfil próprio, guardado em
+instaladas deles. Se você só tem um deles, instale o Chromium do Playwright
+(é um download grande, que fica fora da pasta do projeto):
+
+```bash
+cd recruiter-backend
+npx playwright-core install chromium
+```
+
+O navegador abre com um perfil próprio, guardado em
 `~/.local/share/job-tracker/`, fora da pasta do projeto — suas abas e logins
 do dia a dia não são tocados. Se a plataforma
-pedir login, faça pelo próprio Chrome que abrir; a sessão fica salva nesse
+pedir login, faça pelo próprio navegador que abrir; a sessão fica salva nesse
 perfil. O app preenche nome, email, telefone e links, deixa em branco o que não
 reconhece e **nunca envia**: você revisa e clica em enviar.
 

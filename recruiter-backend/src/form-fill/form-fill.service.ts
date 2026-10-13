@@ -17,7 +17,7 @@ import { assertReachable, FetchError } from '../job/safe-fetch';
 import { ConfigService } from '@nestjs/config';
 import type { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
-import { chooseBrowser } from './browser';
+import { chooseBrowser, detectDefaultBrowser } from './browser';
 import { buildFieldPlan, NEVER_FILL, type PlannedField } from './field-plan';
 
 /**
@@ -228,13 +228,15 @@ export class FormFillService {
 
     const browser = chooseBrowser({
       override: this.config.get('FORM_FILL_BROWSER_PATH', { infer: true }),
+      defaultId: detectDefaultBrowser(),
+      bundledPath: chromium.executablePath(),
     });
 
     if (!browser) {
       throw new ServiceUnavailableException({
         error: 'Service Unavailable',
         message:
-          'Não achei um navegador para preencher o formulário. Instale o Chrome, Brave, Edge ou Chromium, ou informe o caminho em FORM_FILL_BROWSER_PATH no .env do backend.',
+          'Não achei um navegador para preencher o formulário. O preenchimento precisa de Chrome, Brave, Edge, Chromium ou Vivaldi. Se você usa só Firefox ou Safari, rode `npx playwright-core install chromium` na pasta recruiter-backend, ou informe o caminho do navegador em FORM_FILL_BROWSER_PATH no .env do backend.',
       });
     }
 
