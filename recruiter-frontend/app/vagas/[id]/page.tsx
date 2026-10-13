@@ -5,6 +5,7 @@ import { ApiError } from "@/features/jobs/api";
 import { JobDetail, getJob } from "@/features/jobs";
 import type { Job } from "@/features/jobs";
 import { getSelectedProfile } from "@/features/profile/current-profile";
+import { TailorPanel, getTailoredVersion } from "@/features/tailored-resume";
 
 export default async function VagaPage({
   params,
@@ -28,6 +29,7 @@ export default async function VagaPage({
   }
 
   const profile = await getSelectedProfile();
+  const tailored = profile ? await getTailoredVersion(profile.id, job.id) : null;
 
   return (
     <div className="flex w-full flex-col gap-6">
@@ -37,6 +39,11 @@ export default async function VagaPage({
       {profile && (
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
           <FitPanel profileId={profile.id} jobId={job.id} />
+          <TailorPanel
+            profileId={profile.id}
+            jobId={job.id}
+            initialVersion={tailored}
+          />
           <AnswerPanel profileId={profile.id} jobId={job.id} />
         </div>
       )}
