@@ -46,7 +46,9 @@ você pede, e o que ele propõe passa pelo seu clique antes de virar dado.
 
 ## Requisitos
 
-- **Node.js 20.9 ou mais novo** e npm
+- **Node.js 20.9 ou mais novo** e npm. O repositório traz um `.nvmrc`: com
+  [nvm](https://github.com/nvm-sh/nvm), `nvm use` na pasta escolhe a versão certa.
+  Com Node 18 o Prisma quebra logo ao iniciar (`styleText is not a function`).
 - **Docker**, para o Postgres
 - **Um navegador baseado em Chromium** (Chrome, Brave, Edge, Chromium ou
   Vivaldi), só se for usar o preenchimento de formulário
