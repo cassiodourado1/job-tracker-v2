@@ -1,0 +1,56 @@
+# Confere cada PR e cada push na main: lint, tipos e testes dos dois apps.
+# Não sobe banco nem chama serviço externo — os testes de unidade não precisam,
+# e o CI não tem acesso a nenhuma credencial.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # O postinstall gera o client do Prisma e compila o packages/shared,
+      # que os dois apps importam já compilado.
+      - run: npm ci
+
+      - name: Backend — lint
+        working-directory: recruiter-backend
+        # Sem o --fix do script `lint`: no CI, erro tem que falhar, não sumir.
+        run: npx eslint "{src,apps,libs,test}/**/*.ts"
+
+      - name: Backend — tipos
+        working-directory: recruiter-backend
+        run: npx tsc --noEmit -p .
+
+      - name: Backend — testes
+        working-directory: recruiter-backend
+        run: npx jest
+
+      # O next-env.d.ts e os tipos das rotas não estão no repositório: quem os
+      # gera é o `next dev`. Num clone limpo, o `next typegen` faz isso.
+      - name: Frontend — tipos
+        working-directory: recruiter-frontend
+        run: |
+          npx next typegen
+          npx tsc --noEmit -p .
+
+      - name: Frontend — lint
+        working-directory: recruiter-frontend
+        run: npx eslint
