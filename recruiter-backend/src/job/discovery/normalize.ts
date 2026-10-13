@@ -289,14 +289,20 @@ export const STACK_VOCABULARY: [RegExp, string][] = [
 const MAX_STACK = 10;
 
 export function stackFromText(...parts: (string | null)[]): string[] {
+  return stackLabelsIn(...parts).slice(0, MAX_STACK);
+}
+
+/**
+ * Todas as tecnologias do vocabulário que o texto cita, sem teto.
+ *
+ * Para comparar textos, não para a tela: com o teto, um currículo com doze
+ * tecnologias perderia duas, e elas pareceriam ausentes dele.
+ */
+export function stackLabelsIn(...parts: (string | null)[]): string[] {
   const haystack = fold(parts.filter(Boolean).join(' '));
   const found: string[] = [];
 
   for (const [pattern, label] of STACK_VOCABULARY) {
-    if (found.length >= MAX_STACK) {
-      break;
-    }
-
     if (pattern.test(haystack) && !found.includes(label)) {
       found.push(label);
     }

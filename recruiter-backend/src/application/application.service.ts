@@ -174,6 +174,7 @@ export class ApplicationService {
       const resumeVersionId = await freezeResume(
         tx,
         input.profileId,
+        job.id,
         profile.resume,
       );
 
@@ -445,6 +446,9 @@ function toApplicationDto(row: ApplicationRow): Application {
 /**
  * Congela o currículo do momento e devolve a versão a vincular.
  *
+ * Se você salvou um currículo adaptado para esta vaga, é ele que vai: foi o
+ * que você preparou para mandar a ela.
+ *
  * Reaproveita a última quando o conteúdo não mudou: sem isso seriam 30 linhas
  * idênticas depois de 30 candidaturas numa semana, e "qual versão eu mandei"
  * deixaria de ter resposta útil — teria 30 respostas iguais.
@@ -459,16 +463,29 @@ function toApplicationDto(row: ApplicationRow): Application {
 async function freezeResume(
   tx: Pick<PrismaService, 'resumeVersion'>,
   profileId: string,
+  jobId: string,
   stored: unknown,
 ): Promise<string | null> {
+  const tailored = await tx.resumeVersion.findFirst({
+    where: { profileId, jobId },
+    orderBy: { createdAt: 'desc' },
+    select: { id: true },
+  });
+
+  if (tailored) {
+    return tailored.id;
+  }
+
   const resume = snapshotOf(stored);
 
   if (!resume) {
     return null;
   }
 
+  // Só as versões base: uma adaptada nunca é igual ao currículo base, e
+  // compará-la faria criar uma versão nova a cada candidatura.
   const latest = await tx.resumeVersion.findFirst({
-    where: { profileId },
+    where: { profileId, jobId: null },
     orderBy: { createdAt: 'desc' },
     select: { id: true, content: true },
   });
