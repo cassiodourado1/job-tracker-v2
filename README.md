@@ -39,6 +39,7 @@ sugere o novo status. Você confirma com um clique.
 | Importar currículo a partir de um PDF | sim |
 | Aderência entre uma vaga e o seu currículo: o que você já mostra, o que falta e como contornar | sim |
 | Currículo adaptado para uma vaga, sem acrescentar nada que o currículo não tenha, salvo como a versão enviada naquela candidatura | sim |
+| Preparação para entrevista: perguntas prováveis com pontos de resposta do seu currículo, o que estudar e o que perguntar à empresa | sim |
 
 Sem a chave, tudo da primeira metade funciona. Com ela, o Claude entra só onde
 você pede, e o que ele propõe passa pelo seu clique antes de virar dado.
