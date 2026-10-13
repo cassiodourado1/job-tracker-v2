@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { AnswerPanel } from "@/features/answers";
+import { PrepPanel, getInterviewPrep } from "@/features/interview-prep";
 import { FitPanel } from "@/features/job-fit";
 import { ApiError } from "@/features/jobs/api";
 import { JobDetail, getJob } from "@/features/jobs";
@@ -29,7 +30,12 @@ export default async function VagaPage({
   }
 
   const profile = await getSelectedProfile();
-  const tailored = profile ? await getTailoredVersion(profile.id, job.id) : null;
+  const [tailored, prep] = profile
+    ? await Promise.all([
+        getTailoredVersion(profile.id, job.id),
+        getInterviewPrep(profile.id, job.id),
+      ])
+    : [null, null];
 
   return (
     <div className="flex w-full flex-col gap-6">
@@ -44,6 +50,7 @@ export default async function VagaPage({
             jobId={job.id}
             initialVersion={tailored}
           />
+          <PrepPanel profileId={profile.id} jobId={job.id} initial={prep} />
           <AnswerPanel profileId={profile.id} jobId={job.id} />
         </div>
       )}

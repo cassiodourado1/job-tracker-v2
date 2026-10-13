@@ -80,6 +80,7 @@ model Profile {
 
   applications   Application[]
   resumeVersions ResumeVersion[]
+  interviewPreps InterviewPrep[]
   emailMessages  EmailMessage[]
   savedJobs      SavedJob[]
   dismissedJobs  DismissedJob[]
@@ -186,6 +187,7 @@ model Job {
   applications   Application[]
   savedBy        SavedJob[]
   resumeVersions ResumeVersion[]
+  interviewPreps InterviewPrep[]
 }
 
 /// Vaga guardada por um perfil para aplicar depois.
@@ -317,6 +319,24 @@ model ResumeVersion {
   applications Application[]
 
   @@index([profileId, createdAt])
+  @@index([profileId, jobId, createdAt])
+}
+
+/// Preparação para entrevista de uma vaga, gerada pelo Claude. Guardada porque
+/// é lida no dia da entrevista, dias depois de gerada, e gerar de novo é pago.
+model InterviewPrep {
+  id        String  @id @default(cuid())
+  profileId String
+  jobId     String
+  /// O que você contou da etapa ("técnica com o tech lead"), quando contou.
+  context   String?
+  content   Json
+
+  createdAt DateTime @default(now())
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  job     Job     @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
   @@index([profileId, jobId, createdAt])
 }
 
