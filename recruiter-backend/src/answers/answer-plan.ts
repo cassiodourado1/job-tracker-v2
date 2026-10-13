@@ -432,7 +432,7 @@ export function fold(text: string): string {
  * é feita deles — é estatística, na escolha das palavras —, mas um caractere
  * invisível colado num formulário não tem motivo para existir.
  */
-function clean(text: string | null): string | null {
+export function clean(text: string | null): string | null {
   const value = text?.replace(/[\u200b-\u200d\u2060\ufeff]/g, '').trim();
 
   return value ? value : null;

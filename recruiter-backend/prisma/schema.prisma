@@ -59,24 +59,24 @@ enum ContractType {
 /// pertencem ao mesmo usuário. Se um dia virar multi-usuário, é aqui que entra
 /// o vínculo com uma conta, sem remodelar o resto.
 model Profile {
-  id        String   @id @default(cuid())
-  name      String
+  id             String   @id @default(cuid())
+  name           String
   /// Diferencia perfis do mesmo dono, ex.: "Backend Sênior" x "Tech Lead".
-  headline  String?
-  email     String?
-  phone     String?
-  location  String?
+  headline       String?
+  email          String?
+  phone          String?
+  location       String?
   /// { github, linkedin, site, ... } — validado com Zod na borda do Nest.
-  links     Json?
+  links          Json?
   /// CV estruturado base (experiências, skills, projetos), validado com Zod.
-  resume    Json?
+  resume         Json?
   /// Filtro da descoberta de vagas: escopo, modalidade, contrato, senioridade
   /// e stacks preferidas. Validado com Zod na borda, como `links` e `resume`.
   /// Não vem em export nenhum — imune ao import do LinkedIn.
   jobPreferences Json?
-  isDefault Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  isDefault      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   applications   Application[]
   resumeVersions ResumeVersion[]
@@ -176,15 +176,16 @@ model Job {
   /// Jornada semanal em horas.
   weeklyHours Int?
   /// linkedin, greenhouse, lever, gupy, manual...
-  source       String?
+  source      String?
   /// Quando o Claude extraiu os campos acima a partir da URL.
-  extractedAt  DateTime?
+  extractedAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  applications Application[]
-  savedBy      SavedJob[]
+  applications   Application[]
+  savedBy        SavedJob[]
+  resumeVersions ResumeVersion[]
 }
 
 /// Vaga guardada por um perfil para aplicar depois.
@@ -260,7 +261,7 @@ model Application {
 /// Histórico de transições. É o que gera as métricas ("quantas viraram
 /// entrevista?"). Nunca sobrescrever `Application.status` sem gravar o evento.
 model StatusEvent {
-  id             String @id @default(cuid())
+  id             String  @id @default(cuid())
   applicationId  String
   emailMessageId String?
 
@@ -297,6 +298,11 @@ model ResumeVersion {
   id        String @id @default(cuid())
   profileId String
 
+  /// Preenchido só na versão adaptada para uma vaga. Nula é o currículo base
+  /// congelado: é contra ela que cada candidatura nova compara o currículo
+  /// para decidir se reaproveita a versão ou cria outra.
+  jobId String?
+
   /// Ex.: "backend sênior — vaga X".
   label   String
   content Json
@@ -306,9 +312,12 @@ model ResumeVersion {
   createdAt DateTime @default(now())
 
   profile      Profile       @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  /// SetNull: a versão é o registro do que foi enviado, e sobrevive à vaga.
+  job          Job?          @relation(fields: [jobId], references: [id], onDelete: SetNull)
   applications Application[]
 
   @@index([profileId, createdAt])
+  @@index([profileId, jobId, createdAt])
 }
 
 /// Email ingerido por IMAP, vinculado ou não a uma candidatura.

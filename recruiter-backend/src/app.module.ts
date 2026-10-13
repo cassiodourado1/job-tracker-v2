@@ -7,6 +7,7 @@ import { ApplicationModule } from './application/application.module';
 import { EmailModule } from './email/email.module';
 import { JobModule } from './job/job.module';
 import { JobFitModule } from './job-fit/job-fit.module';
+import { TailoredResumeModule } from './tailored-resume/tailored-resume.module';
 import { FormFillModule } from './form-fill/form-fill.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { validateEnv } from './config/env';
@@ -26,6 +27,7 @@ import { TodayModule } from './today/today.module';
     ApplicationModule,
     JobModule,
     JobFitModule,
+    TailoredResumeModule,
     EmailModule,
     MetricsModule,
     FormFillModule,

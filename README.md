@@ -37,6 +37,8 @@ sugere o novo status. Você confirma com um clique.
 | Extração de vaga a partir de um link | sim |
 | Respostas para perguntas abertas de formulário, a partir do seu currículo | sim |
 | Importar currículo a partir de um PDF | sim |
+| Aderência entre uma vaga e o seu currículo: o que você já mostra, o que falta e como contornar | sim |
+| Currículo adaptado para uma vaga, sem acrescentar nada que o currículo não tenha, salvo como a versão enviada naquela candidatura | sim |
 
 Sem a chave, tudo da primeira metade funciona. Com ela, o Claude entra só onde
 você pede, e o que ele propõe passa pelo seu clique antes de virar dado.
