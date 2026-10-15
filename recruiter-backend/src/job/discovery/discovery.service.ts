@@ -158,6 +158,24 @@ export class DiscoveryService {
   }
 
   /**
+   * Todas as vagas que passam nas preferências, sem fatiar nem tirar as que
+   * você já resolveu: é o mercado, para o painel, não a sua fila.
+   */
+  async eligible(
+    preferences: JobPreferences,
+  ): Promise<{ items: JobSearchResult[]; failed: string[] }> {
+    const { items, failed } = await this.collect({
+      terms: preferences.searchTerms,
+      companies: watchedCompanies(preferences.companyPages),
+    });
+
+    return {
+      items: items.filter((job) => matches(job, preferences)),
+      failed,
+    };
+  }
+
+  /**
    * Busca em todas as fontes, com cache por termo.
    *
    * `Promise.allSettled` com prazo por fonte: um board fora do ar ou lento vira

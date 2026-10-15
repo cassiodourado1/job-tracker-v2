@@ -13,6 +13,7 @@ import {
   discoverJobsSchema,
   dismissJobSchema,
   extractJobSchema,
+  jobsDashboardQuerySchema,
   saveJobSchema,
   undismissJobSchema,
 } from '@recruit/shared';
@@ -22,6 +23,8 @@ import type {
   DismissJobInput,
   ExtractJobInput,
   Job,
+  JobsDashboard,
+  JobsDashboardQuery,
   JobSearchResult,
   SaveJobInput,
   SavedJob,
@@ -52,6 +55,16 @@ export class JobController {
     @Query('profileId', ProfileExistsPipe) profileId: string,
   ): Promise<DiscoverResult> {
     return this.jobService.discover({ ...query, profileId });
+  }
+
+  /** Painel do mercado. Também antes de `:id`, pelo mesmo motivo. */
+  @Get('dashboard')
+  dashboard(
+    @Query(new ZodValidationPipe(jobsDashboardQuerySchema))
+    query: JobsDashboardQuery,
+    @Query('profileId', ProfileExistsPipe) profileId: string,
+  ): Promise<JobsDashboard> {
+    return this.jobService.dashboard(profileId, query.window);
   }
 
   /**
