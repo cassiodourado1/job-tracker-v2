@@ -9,9 +9,11 @@ import {
   defaultJobPreferences,
   jobPreferencesSchema,
   resumeSchema,
+  type DashboardWindow,
   type DiscoverResult,
   type DismissJobInput,
   type Job,
+  type JobsDashboard,
   type JobSearchResult,
   type JobSort,
   type SaveJobInput,
@@ -21,6 +23,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import type { JobModel } from '../generated/prisma/models';
 import { canonicalJobUrl } from './discovery/canonical-url';
+import { buildDashboard } from './dashboard';
 import { DiscoveryService } from './discovery/discovery.service';
 
 @Injectable()
@@ -82,6 +85,26 @@ export class JobService {
     );
 
     return result;
+  }
+
+  /**
+   * O painel do mercado: as vagas que passam nos filtros do perfil, na
+   * janela pedida. Usa o mesmo acervo (e o mesmo cache) da descoberta.
+   */
+  async dashboard(
+    profileId: string,
+    window: DashboardWindow,
+  ): Promise<JobsDashboard> {
+    const profile = await this.prisma.profile.findUnique({
+      where: { id: profileId },
+      select: { jobPreferences: true },
+    });
+    const preferences = jobPreferencesSchema.safeParse(profile?.jobPreferences);
+    const { items, failed } = await this.discoveryService.eligible(
+      preferences.success ? preferences.data : defaultJobPreferences,
+    );
+
+    return buildDashboard(items, window, new Date(), failed);
   }
 
   /**

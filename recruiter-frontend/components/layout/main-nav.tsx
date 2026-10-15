@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "motion/react";
 import {
+  IconBars,
   IconBriefcase,
   IconCalendar,
   IconChart,
@@ -30,6 +31,7 @@ const items: NavItem[] = [
   { id: "hoje", label: "Hoje", icon: <IconCalendar />, href: "/hoje" },
   { id: "candidaturas", label: "Candidaturas", icon: <IconList />, href: "/" },
   { id: "vagas", label: "Vagas", icon: <IconBriefcase />, href: "/vagas" },
+  { id: "mercado", label: "Mercado", icon: <IconBars />, href: "/mercado" },
   { id: "curriculo", label: "Currículo", icon: <IconDocument />, href: "/curriculo" },
   { id: "emails", label: "Emails", icon: <IconMail />, href: "/emails" },
   { id: "metricas", label: "Métricas", icon: <IconChart />, href: "/metricas" },
