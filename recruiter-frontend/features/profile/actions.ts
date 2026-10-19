@@ -60,6 +60,7 @@ export async function createProfileAction(
   try {
     const profile = await createProfile(parsed.data);
     revalidatePath("/");
+    revalidatePath("/candidaturas");
 
     return { status: "success", profile };
   } catch (error) {
@@ -105,6 +106,7 @@ export async function saveProfileAction(
     await updateProfile(id, parsed.data);
     revalidatePath("/curriculo");
     revalidatePath("/");
+    revalidatePath("/candidaturas");
 
     return { status: "success" };
   } catch (error) {

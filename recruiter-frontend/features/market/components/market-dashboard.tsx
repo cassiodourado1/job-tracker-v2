@@ -51,7 +51,7 @@ export function MarketDashboard({ data }: { data: JobsDashboard }) {
           {(Object.keys(WINDOW_LABEL) as DashboardWindow[]).map((option) => (
             <Link
               key={option}
-              href={`/mercado?janela=${option}`}
+              href={`/?janela=${option}`}
               aria-current={option === window ? "page" : undefined}
               className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
                 option === window

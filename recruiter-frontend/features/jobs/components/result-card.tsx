@@ -288,7 +288,7 @@ export function ResultCard({
                 Espaçamentos enxutos para caber no card da grade de 4 colunas. */}
             {applied ? (
               <Link
-                href="/"
+                href="/candidaturas"
                 className="flex items-center whitespace-nowrap rounded-lg px-2.5 py-1.5 text-sm font-medium text-emerald-700 underline underline-offset-4 transition hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950"
               >
                 Candidatura registrada

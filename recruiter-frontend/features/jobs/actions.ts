@@ -101,7 +101,7 @@ export async function applyToJobAction(
 ): Promise<JobActionState> {
   try {
     await registerApplied(profileId, jobId);
-    revalidatePath("/");
+    revalidatePath("/candidaturas");
     revalidatePath("/vagas/salvas");
 
     return { status: "success" };
@@ -122,7 +122,7 @@ export async function markAppliedAction(
     const saved = await saveJob(profileId, result);
 
     await registerApplied(profileId, saved.jobId);
-    revalidatePath("/");
+    revalidatePath("/candidaturas");
     revalidatePath("/vagas/salvas");
 
     return { status: "success" };

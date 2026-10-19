@@ -1,8 +1,8 @@
 /**
  * A primeira abertura consulta os portais e leva uns segundos; sem isto a
- * tela anterior ficava parada, parecendo que o clique não pegou.
+ * tela ficava em branco, parecendo que nada acontecia.
  */
-export default function Loading() {
+export function MarketLoading() {
   return (
     <div
       role="status"
