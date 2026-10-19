@@ -16,6 +16,25 @@ export const dashboardWindowSchema = z.enum(DASHBOARD_WINDOWS);
 
 export type DashboardWindow = z.infer<typeof dashboardWindowSchema>;
 
+/**
+ * Recorte que o painel passa para a tela de Vagas ao clicar numa linha.
+ *
+ * Aplicado DEPOIS dos filtros do perfil, sobre o mesmo acervo do painel, e
+ * nunca gravado: é "me mostre essas", não uma preferência nova. Diferente do
+ * texto da busca (`q`), não troca o que se pesquisa nos portais — por isso a
+ * contagem da tela bate com a do painel.
+ */
+export const jobDrilldownSchema = z.object({
+  source: z.string().trim().min(1).max(40).optional(),
+  company: z.string().trim().min(1).max(160).optional(),
+  stack: z.string().trim().min(1).max(40).optional(),
+  /** `nao-informa`: a vaga não declara a modalidade. */
+  workModel: z.enum([...workModelSchema.options, 'nao-informa']).optional(),
+  postedWithin: dashboardWindowSchema.optional(),
+});
+
+export type JobDrilldown = z.infer<typeof jobDrilldownSchema>;
+
 export const jobsDashboardQuerySchema = z.strictObject({
   profileId: z.string().min(1),
   window: dashboardWindowSchema.default('7d'),

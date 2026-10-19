@@ -1,5 +1,5 @@
 import type { JobSearchResult } from '@recruit/shared';
-import { buildDashboard } from './dashboard';
+import { buildDashboard, matchesDrilldown } from './dashboard';
 
 /** Vagas SINTÉTICAS. */
 function job(partial: Partial<JobSearchResult>): JobSearchResult {
@@ -134,5 +134,50 @@ describe('buildDashboard', () => {
 
     expect(dashboard.timeline).toHaveLength(24);
     expect(dashboard.timeline.at(-1)?.key).toBe('2026-10-15T12');
+  });
+});
+
+describe('matchesDrilldown', () => {
+  const base = job({
+    company: 'Ação Tech',
+    source: 'gupy',
+    stack: ['React'],
+    workModel: null,
+    postedAt: hoursAgo(30),
+  });
+
+  it('casa empresa sem caixa e acento, fonte e tecnologia', () => {
+    expect(
+      matchesDrilldown(
+        base,
+        { company: 'ACAO TECH', source: 'gupy', stack: 'React' },
+        NOW,
+      ),
+    ).toBe(true);
+    expect(matchesDrilldown(base, { source: 'nerdin' }, NOW)).toBe(false);
+    expect(matchesDrilldown(base, { stack: 'Vue' }, NOW)).toBe(false);
+  });
+
+  it('modalidade não informada casa com "nao-informa"', () => {
+    expect(matchesDrilldown(base, { workModel: 'nao-informa' }, NOW)).toBe(
+      true,
+    );
+    expect(matchesDrilldown(base, { workModel: 'remoto' }, NOW)).toBe(false);
+  });
+
+  it('período pela data de publicação; sem data fica de fora', () => {
+    expect(matchesDrilldown(base, { postedWithin: '7d' }, NOW)).toBe(true);
+    expect(matchesDrilldown(base, { postedWithin: '24h' }, NOW)).toBe(false);
+    expect(
+      matchesDrilldown(
+        { ...base, postedAt: null },
+        { postedWithin: '30d' },
+        NOW,
+      ),
+    ).toBe(false);
+  });
+
+  it('recorte vazio deixa tudo passar', () => {
+    expect(matchesDrilldown(base, {}, NOW)).toBe(true);
   });
 });

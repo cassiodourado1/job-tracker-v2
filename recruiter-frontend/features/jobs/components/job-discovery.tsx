@@ -6,6 +6,7 @@ import {
   DEFAULT_JOB_SORT,
   JOB_SORTS,
   type Exhaustion,
+  type JobDrilldown,
   type JobPreferences,
   type JobSort,
 } from "@recruit/shared";
@@ -38,6 +39,8 @@ interface JobDiscoveryProps {
   preferences: JobPreferences;
   savedUrls: string[];
   savedCount: number;
+  /** Recorte vindo de um clique no painel; vazio na navegação normal. */
+  drill: JobDrilldown;
 }
 
 /** Trava contra laço infinito se o cursor parar de avançar por um defeito. */
@@ -49,15 +52,20 @@ export function JobDiscovery({
   preferences,
   savedUrls,
   savedCount,
+  drill,
 }: JobDiscoveryProps) {
+  // Quem chega pelo painel clicou para VER as vagas: a busca já nasce ligada,
+  // com o primeiro lote pedido, em vez de esperar outro clique em "Buscar".
+  const drilled = Object.values(drill).some(Boolean);
+
   const [items, setItems] = useState<SearchResultItem[]>([]);
-  const [running, setRunning] = useState(false);
+  const [running, setRunning] = useState(drilled);
   const [completed, setCompleted] = useState(0);
   const [exhausted, setExhausted] = useState<Exhaustion | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [total, setTotal] = useState<number | null>(null);
   const [failed, setFailed] = useState<string[]>([]);
-  const [demand, setDemand] = useState(0);
+  const [demand, setDemand] = useState(drilled ? 1 : 0);
 
   const [expanded, setExpanded] = useState(false);
   const [sort, setSort] = useState<JobSort>(DEFAULT_JOB_SORT);
@@ -144,6 +152,7 @@ export function JobDiscovery({
         q: query || undefined,
         expanded,
         sort,
+        drill,
       });
 
       if (!alive()) {
@@ -181,7 +190,7 @@ export function JobDiscovery({
     return () => {
       cancelled = true;
     };
-  }, [demand, running, exhausted, profileId, query, expanded, sort, stop]);
+  }, [demand, running, exhausted, profileId, query, expanded, sort, stop, drill]);
 
   // Pede o próximo lote quando o fim da lista aparece na tela.
   useEffect(() => {
@@ -219,6 +228,7 @@ export function JobDiscovery({
               <h2 className="text-lg font-semibold">Procurar vagas</h2>
               <Counter items={items.length} total={total} />
               {query && <SearchFilterNotice query={query} />}
+              {drilled && <DrillNotice drill={drill} />}
             </div>
             <p className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
               Traz vagas de portais, agregadores e empresas; mais vagas chegam
@@ -474,6 +484,44 @@ function SearchFilterNotice({ query }: { query: string }) {
       title="Com texto na busca, os portais procuram só este texto, no lugar dos seus termos de busca, e a vaga precisa ter a palavra no título, na empresa ou nas tecnologias."
     >
       Filtrando por “{query}”
+      <span aria-hidden="true">·</span>
+      <Link
+        href="/vagas"
+        className="font-medium underline underline-offset-2 hover:no-underline"
+      >
+        limpar
+      </Link>
+    </span>
+  );
+}
+
+const WINDOW_TEXT = { "24h": "24 horas", "7d": "7 dias", "30d": "30 dias" };
+
+const WORK_MODEL_TEXT = {
+  remoto: "remotas",
+  hibrido: "híbridas",
+  presencial: "presenciais",
+  "nao-informa": "sem modalidade informada",
+};
+
+/**
+ * O recorte que veio do painel, dito por extenso, com o "limpar". Sem isto a
+ * lista mostraria 9 vagas sem explicar por que só 9.
+ */
+function DrillNotice({ drill }: { drill: JobDrilldown }) {
+  const parts = [
+    drill.company,
+    drill.source,
+    drill.stack,
+    drill.workModel ? WORK_MODEL_TEXT[drill.workModel] : null,
+    drill.postedWithin
+      ? `publicadas nas últimas ${WINDOW_TEXT[drill.postedWithin]}`
+      : null,
+  ].filter(Boolean);
+
+  return (
+    <span className="flex items-baseline gap-1.5 rounded-full border border-sky-800 bg-sky-950 px-2.5 py-0.5 text-xs text-sky-200">
+      Do painel: {parts.join(" · ")}
       <span aria-hidden="true">·</span>
       <Link
         href="/vagas"

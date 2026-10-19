@@ -1,3 +1,4 @@
+import { jobDrilldownSchema, type JobDrilldown } from "@recruit/shared";
 import { listSavedJobs } from "@/features/jobs";
 import { JobDiscovery } from "@/features/jobs/components/job-discovery";
 import { getProfileDetail } from "@/features/profile/api";
@@ -16,7 +17,7 @@ import { getSelectedProfile } from "@/features/profile/current-profile";
 export default async function BuscarVagasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const [selected, params] = await Promise.all([
     getSelectedProfile(),
@@ -41,6 +42,23 @@ export default async function BuscarVagasPage({
         .map((item) => item.job.url)
         .filter((url) => url !== null)}
       savedCount={saved.length}
+      drill={drillFrom(params)}
     />
   );
+}
+
+/**
+ * O recorte que o painel manda pela URL, com os nomes em português que
+ * aparecem na barra de endereço. Valor inválido some, em vez de dar erro.
+ */
+function drillFrom(params: Record<string, string | undefined>): JobDrilldown {
+  const parsed = jobDrilldownSchema.safeParse({
+    source: params.fonte || undefined,
+    company: params.empresa || undefined,
+    stack: params.tecnologia || undefined,
+    workModel: params.modalidade || undefined,
+    postedWithin: params.janela || undefined,
+  });
+
+  return parsed.success ? parsed.data : {};
 }

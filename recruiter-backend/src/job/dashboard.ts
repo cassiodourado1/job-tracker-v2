@@ -1,5 +1,6 @@
 import type {
   DashboardWindow,
+  JobDrilldown,
   JobsDashboard,
   JobSearchResult,
   WorkModel,
@@ -105,6 +106,49 @@ function topCompanies(jobs: JobSearchResult[]) {
   return ranked(jobs.map((job) => companyKey(job.company)))
     .slice(0, TOP)
     .map(([key, count]) => ({ company: names.get(key) ?? key, count }));
+}
+
+/**
+ * A vaga está no recorte que você clicou no painel?
+ *
+ * Mesmas regras do painel — empresa sem caixa e acento, janela pela data de
+ * publicação —, para a tela de Vagas mostrar as vagas que o número contou.
+ */
+export function matchesDrilldown(
+  job: JobSearchResult,
+  drill: JobDrilldown,
+  now: Date,
+): boolean {
+  if (drill.source && job.source !== drill.source) {
+    return false;
+  }
+
+  if (drill.company && companyKey(job.company) !== companyKey(drill.company)) {
+    return false;
+  }
+
+  if (drill.stack && !job.stack.includes(drill.stack)) {
+    return false;
+  }
+
+  if (drill.workModel && (job.workModel ?? 'nao-informa') !== drill.workModel) {
+    return false;
+  }
+
+  if (drill.postedWithin) {
+    const at = job.postedAt ? Date.parse(job.postedAt) : NaN;
+    const end = now.getTime();
+
+    if (
+      Number.isNaN(at) ||
+      at <= end - WINDOW_MS[drill.postedWithin] ||
+      at > end
+    ) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 function companyKey(company: string): string {

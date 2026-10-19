@@ -33,6 +33,9 @@ const WORK_MODEL_LABEL: Record<WorkModel, string> = {
 
 export function MarketDashboard({ data }: { data: JobsDashboard }) {
   const window = data.window;
+  // Cada número leva às vagas que ele contou, na tela de Vagas.
+  const vagas = (drill: Record<string, string> = {}) =>
+    `/vagas?${new URLSearchParams({ janela: window, ...drill }).toString()}`;
   const percent = (value: number) =>
     data.total === 0 ? 0 : Math.round((value / data.total) * 100);
 
@@ -69,6 +72,7 @@ export function MarketDashboard({ data }: { data: JobsDashboard }) {
         <Tile
           label={`Vagas publicadas (${WINDOW_LABEL[window]})`}
           value={data.total}
+          href={vagas()}
           note={
             // Só na janela de 24h: vaga velha sai do ar e some da fonte, então
             // a janela anterior de 7 ou 30 dias sempre parece menor do que foi.
@@ -82,6 +86,7 @@ export function MarketDashboard({ data }: { data: JobsDashboard }) {
         <Tile
           label="Remotas"
           value={data.remote}
+          href={vagas({ modalidade: "remoto" })}
           note={`${percent(data.remote)}% das vagas publicadas`}
         />
         <Tile
@@ -105,6 +110,7 @@ export function MarketDashboard({ data }: { data: JobsDashboard }) {
           <Ranked
             rows={data.bySource.map((row) => ({
               key: row.source,
+              href: vagas({ fonte: row.source }),
               label: sourceLabel(row.source),
               count: row.count,
               color: sourceColor(seriesOf(row.source)),
@@ -128,6 +134,7 @@ export function MarketDashboard({ data }: { data: JobsDashboard }) {
           <Ranked
             rows={data.byCompany.map((row) => ({
               key: row.company,
+              href: vagas({ empresa: row.company }),
               label: row.company,
               count: row.count,
             }))}
@@ -141,6 +148,7 @@ export function MarketDashboard({ data }: { data: JobsDashboard }) {
           <Ranked
             rows={data.byStack.map((row) => ({
               key: row.stack,
+              href: vagas({ tecnologia: row.stack }),
               label: row.stack,
               count: row.count,
             }))}
@@ -151,6 +159,7 @@ export function MarketDashboard({ data }: { data: JobsDashboard }) {
           <Ranked
             rows={data.byWorkModel.map((row) => ({
               key: row.workModel ?? "nao-informa",
+              href: vagas({ modalidade: row.workModel ?? "nao-informa" }),
               label: row.workModel
                 ? WORK_MODEL_LABEL[row.workModel]
                 : "Não informa",
@@ -172,22 +181,39 @@ export function MarketDashboard({ data }: { data: JobsDashboard }) {
   );
 }
 
+/** Com `href`, o card inteiro é o link para as vagas que ele contou. */
 function Tile({
   label,
   value,
   note,
+  href,
 }: {
   label: string;
   value: number;
   note: React.ReactNode;
+  href?: string;
 }) {
-  return (
-    <section className="cine-glass flex flex-col gap-1 rounded-2xl p-5">
+  const content = (
+    <>
       <h2 className="text-sm text-zinc-400">{label}</h2>
       <span className="text-4xl font-semibold tabular-nums tracking-tight">
         {value}
       </span>
       <span className="text-xs text-zinc-500">{note}</span>
+    </>
+  );
+
+  return href ? (
+    <Link
+      href={href}
+      title="Ver estas vagas"
+      className="cine-glass flex flex-col gap-1 rounded-2xl p-5 transition hover:ring-1 hover:ring-zinc-600"
+    >
+      {content}
+    </Link>
+  ) : (
+    <section className="cine-glass flex flex-col gap-1 rounded-2xl p-5">
+      {content}
     </section>
   );
 }
@@ -244,7 +270,13 @@ function Ranked({
   total,
   showShare = false,
 }: {
-  rows: { key: string; label: string; count: number; color?: string }[];
+  rows: {
+    key: string;
+    href: string;
+    label: string;
+    count: number;
+    color?: string;
+  }[];
   total?: number;
   showShare?: boolean;
 }) {
@@ -255,31 +287,37 @@ function Ranked({
   const max = Math.max(1, ...rows.map((row) => row.count));
 
   return (
-    <ol className="flex flex-col gap-2.5">
+    <ol className="flex flex-col gap-1">
       {rows.map((row) => (
-        <li key={row.key} className="flex flex-col gap-1">
-          <div className="flex items-baseline justify-between gap-3 text-sm">
-            <span className="truncate text-zinc-200" title={row.label}>
-              {row.label}
-            </span>
-            <span className="flex shrink-0 items-baseline gap-2 tabular-nums">
-              <span className="font-medium text-zinc-100">{row.count}</span>
-              {showShare && total ? (
-                <span className="w-9 text-right text-xs text-zinc-500">
-                  {Math.round((row.count / total) * 100)}%
-                </span>
-              ) : null}
-            </span>
-          </div>
-          <div className="h-1.5 rounded-full bg-zinc-800">
-            <div
-              className="h-full rounded-full"
-              style={{
-                width: `${(row.count / max) * 100}%`,
-                background: row.color ?? "var(--series-single)",
-              }}
-            />
-          </div>
+        <li key={row.key}>
+          <Link
+            href={row.href}
+            title={`Ver as vagas: ${row.label}`}
+            className="-mx-2 flex flex-col gap-1 rounded-lg px-2 py-1 transition hover:bg-zinc-800/60"
+          >
+            <div className="flex items-baseline justify-between gap-3 text-sm">
+              <span className="truncate text-zinc-200" title={row.label}>
+                {row.label}
+              </span>
+              <span className="flex shrink-0 items-baseline gap-2 tabular-nums">
+                <span className="font-medium text-zinc-100">{row.count}</span>
+                {showShare && total ? (
+                  <span className="w-9 text-right text-xs text-zinc-500">
+                    {Math.round((row.count / total) * 100)}%
+                  </span>
+                ) : null}
+              </span>
+            </div>
+            <div className="h-1.5 rounded-full bg-zinc-800">
+              <div
+                className="h-full rounded-full"
+                style={{
+                  width: `${(row.count / max) * 100}%`,
+                  background: row.color ?? "var(--series-single)",
+                }}
+              />
+            </div>
+          </Link>
         </li>
       ))}
     </ol>

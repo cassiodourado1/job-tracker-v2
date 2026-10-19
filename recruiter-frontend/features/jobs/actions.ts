@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import type {
-  FillReport, DiscoverResult, JobSearchResult, JobSort } from "@recruit/shared";
+  FillReport, DiscoverResult, JobDrilldown, JobSearchResult, JobSort } from "@recruit/shared";
 import {
   ApiError as ApplicationApiError,
   createApplication,
@@ -202,6 +202,7 @@ export async function discoverAction(params: {
   q?: string;
   expanded?: boolean;
   sort?: JobSort;
+  drill?: JobDrilldown;
 }): Promise<DiscoverState> {
   try {
     return { status: "success", result: await discoverJobs(params) };

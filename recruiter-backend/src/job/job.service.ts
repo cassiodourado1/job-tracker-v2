@@ -12,6 +12,7 @@ import {
   type DashboardWindow,
   type DiscoverResult,
   type DismissJobInput,
+  type JobDrilldown,
   type Job,
   type JobsDashboard,
   type JobSearchResult,
@@ -42,13 +43,15 @@ export class JobService {
    * lote devolvido em `DiscoveredJob` — a descoberta é sem estado, então sem
    * essa escrita não existe resposta para "quantas vagas recebi".
    */
-  async discover(params: {
-    profileId: string;
-    cursor?: string;
-    q?: string;
-    expanded?: boolean;
-    sort?: JobSort;
-  }): Promise<DiscoverResult> {
+  async discover(
+    params: {
+      profileId: string;
+      cursor?: string;
+      q?: string;
+      expanded?: boolean;
+      sort?: JobSort;
+    } & JobDrilldown,
+  ): Promise<DiscoverResult> {
     const profile = await this.prisma.profile.findUnique({
       where: { id: params.profileId },
       select: { resume: true, jobPreferences: true },
@@ -76,6 +79,13 @@ export class JobService {
       excludedUrls: await this.resolvedUrls(params.profileId),
       cursor: params.cursor,
       sort: params.sort ?? DEFAULT_JOB_SORT,
+      drill: {
+        source: params.source,
+        company: params.company,
+        stack: params.stack,
+        workModel: params.workModel,
+        postedWithin: params.postedWithin,
+      },
     });
 
     // Os anúncios agrupados também foram mostrados: estão listados no card.
