@@ -64,7 +64,7 @@ export function TodayPanel({ today }: { today: Today }) {
           hint="O Claude leu respostas das empresas e sugeriu um novo status. Nada muda sem o seu clique."
         >
           <Link
-            href="/"
+            href="/candidaturas"
             className="self-start rounded-lg border border-zinc-300 px-3 py-1.5 text-sm font-medium transition hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
           >
             {today.pendingSuggestions}{" "}
@@ -109,7 +109,7 @@ export function TodayPanel({ today }: { today: Today }) {
           {APPLICATION_STATUSES.map((status) => (
             <Link
               key={status}
-              href="/"
+              href="/candidaturas"
               className="flex items-center gap-1.5 rounded-lg border border-zinc-200 px-2.5 py-1.5 text-sm transition hover:bg-zinc-100 dark:border-zinc-800 dark:hover:bg-zinc-900"
             >
               <StatusBadge status={status} />
@@ -194,7 +194,7 @@ function FollowUpItem({ item }: { item: DueFollowUp }) {
           Adiar {FOLLOW_UP_SNOOZE_DAYS} dias
         </button>
         <Link
-          href="/"
+          href="/candidaturas"
           className="text-xs font-medium underline underline-offset-4"
         >
           Mudar status em Candidaturas

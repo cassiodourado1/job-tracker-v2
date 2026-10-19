@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "motion/react";
 import {
+  IconBars,
   IconBriefcase,
   IconCalendar,
   IconChart,
@@ -27,15 +28,16 @@ interface NavItem {
  * desabilitadas para a navegação não prometer o que ainda não existe.
  */
 const items: NavItem[] = [
+  { id: "mercado", label: "Mercado", icon: <IconBars />, href: "/" },
   { id: "hoje", label: "Hoje", icon: <IconCalendar />, href: "/hoje" },
-  { id: "candidaturas", label: "Candidaturas", icon: <IconList />, href: "/" },
+  { id: "candidaturas", label: "Candidaturas", icon: <IconList />, href: "/candidaturas" },
   { id: "vagas", label: "Vagas", icon: <IconBriefcase />, href: "/vagas" },
   { id: "curriculo", label: "Currículo", icon: <IconDocument />, href: "/curriculo" },
   { id: "emails", label: "Emails", icon: <IconMail />, href: "/emails" },
   { id: "metricas", label: "Métricas", icon: <IconChart />, href: "/metricas" },
 ];
 
-/** "/" só casa exato; as demais casam com as subrotas (/vagas/salvas, /vagas/x). */
+/** "/" (o painel) só casa exato; as demais casam com as subrotas (/vagas/salvas, /vagas/x). */
 function isActive(pathname: string, href: string): boolean {
   return href === "/" ? pathname === "/" : pathname.startsWith(href);
 }

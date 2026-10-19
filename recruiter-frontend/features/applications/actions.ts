@@ -76,7 +76,7 @@ export async function createApplicationAction(
 
   try {
     const application = await createApplication(parsed.data);
-    revalidatePath("/");
+    revalidatePath("/candidaturas");
 
     return { status: "success", application };
   } catch (error) {
@@ -116,7 +116,7 @@ export async function updateApplicationAction(
 
   try {
     const application = await updateApplication(id, parsed.data);
-    revalidatePath("/");
+    revalidatePath("/candidaturas");
 
     return { status: "success", application };
   } catch (error) {
@@ -127,7 +127,7 @@ export async function updateApplicationAction(
 export async function deleteApplicationAction(id: string): Promise<DeleteState> {
   try {
     await deleteApplication(id);
-    revalidatePath("/");
+    revalidatePath("/candidaturas");
 
     return { status: "success" };
   } catch (error) {
@@ -158,7 +158,7 @@ export async function changeStatusAction(
 
   try {
     await updateApplication(id, { status: parsed.data });
-    revalidatePath("/");
+    revalidatePath("/candidaturas");
     revalidatePath("/vagas/salvas");
 
     return { status: "success" };
@@ -210,7 +210,7 @@ export async function setEventDateAction(
 
   try {
     await setEventDate(applicationId, eventId, `${day}T12:00:00.000Z`);
-    revalidatePath("/");
+    revalidatePath("/candidaturas");
     revalidatePath("/metricas");
 
     return { status: "success" };
@@ -232,7 +232,7 @@ export async function acceptSuggestionAction(
 ): Promise<DeleteState> {
   try {
     await acceptSuggestion(emailId);
-    revalidatePath("/");
+    revalidatePath("/candidaturas");
     revalidatePath("/metricas");
 
     return { status: "success" };
@@ -250,7 +250,7 @@ export async function dismissSuggestionAction(
 ): Promise<DeleteState> {
   try {
     await dismissSuggestion(emailId);
-    revalidatePath("/");
+    revalidatePath("/candidaturas");
 
     return { status: "success" };
   } catch (error) {

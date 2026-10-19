@@ -5,6 +5,7 @@ import { watchlistFrom } from './watchlist';
 import {
   watchedCompanyFromUrl,
   type DiscoverResult,
+  type JobDrilldown,
   type JobPreferences,
   type JobSearchResult,
   type JobSort,
@@ -22,6 +23,7 @@ import { NerdinSource } from './sources/nerdin';
 import { RemotarSource } from './sources/remotar';
 import { CompanyPagesSource } from './sources/company-pages';
 import { RemoteOkSource, RemotiveSource } from './sources/remote-boards';
+import { matchesDrilldown } from '../dashboard';
 import { matches, matchesTerm } from './filters';
 import { fold, workModelFromTitle } from './normalize';
 import type { DiscoveryQuery, DiscoverySource } from './provider';
@@ -106,6 +108,7 @@ export class DiscoveryService {
     excludedUrls: Set<string>;
     cursor?: string;
     sort?: JobSort;
+    drill?: JobDrilldown;
   }): Promise<DiscoverResult> {
     const { items, failed, fetchMs } = await this.collect({
       q: params.q,
@@ -114,9 +117,12 @@ export class DiscoveryService {
       companies: watchedCompanies(params.preferences.companyPages),
     });
 
-    const eligible = items
-      .filter((job) => matches(job, params.preferences))
-      .filter((job) => matchesTerm(job, params.q));
+    const eligible = inDrilldown(
+      items
+        .filter((job) => matches(job, params.preferences))
+        .filter((job) => matchesTerm(job, params.q)),
+      params.drill ?? {},
+    );
 
     const ranked = eligible
       .map((job) => ({
@@ -154,6 +160,24 @@ export class DiscoveryService {
         page.length > 0 ? null : eligible.length > 0 ? 'nada-novo' : 'fim',
       failedSources: failed,
       fetchMs,
+    };
+  }
+
+  /**
+   * Todas as vagas que passam nas preferências, sem fatiar nem tirar as que
+   * você já resolveu: é o mercado, para o painel, não a sua fila.
+   */
+  async eligible(
+    preferences: JobPreferences,
+  ): Promise<{ items: JobSearchResult[]; failed: string[] }> {
+    const { items, failed } = await this.collect({
+      terms: preferences.searchTerms,
+      companies: watchedCompanies(preferences.companyPages),
+    });
+
+    return {
+      items: items.filter((job) => matches(job, preferences)),
+      failed,
     };
   }
 
@@ -235,6 +259,34 @@ export class DiscoveryService {
 
     return { items, failed, fetchMs };
   }
+}
+
+/**
+ * O recorte do painel, decidido pelo anúncio PRINCIPAL de cada vaga, como o
+ * painel conta: se a vaga está em dois sites e só o segundo cita React, o
+ * painel não a contou em React, e a lista também não pode mostrá-la. Os
+ * anúncios iguais seguem junto com o principal, para o card agrupar.
+ */
+function inDrilldown(
+  jobs: JobSearchResult[],
+  drill: JobDrilldown,
+): JobSearchResult[] {
+  if (!Object.values(drill).some(Boolean)) {
+    return jobs;
+  }
+
+  const now = new Date();
+  const principal = new Map<string, JobSearchResult>();
+
+  for (const job of jobs) {
+    if (!principal.has(sameJobKey(job))) {
+      principal.set(sameJobKey(job), job);
+    }
+  }
+
+  return jobs.filter((job) =>
+    matchesDrilldown(principal.get(sameJobKey(job))!, drill, now),
+  );
 }
 
 async function withDeadline(

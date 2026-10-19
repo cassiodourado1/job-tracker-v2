@@ -11,6 +11,7 @@ import type {
   DiscoverResult,
   FillReport,
   Job,
+  JobDrilldown,
   JobSearchResult,
   JobSort,
   SavedJob,
@@ -64,6 +65,7 @@ export async function discoverJobs(params: {
   q?: string;
   expanded?: boolean;
   sort?: JobSort;
+  drill?: JobDrilldown;
 }): Promise<DiscoverResult> {
   const search = new URLSearchParams({ profileId: params.profileId });
 
@@ -73,6 +75,10 @@ export async function discoverJobs(params: {
   // Só quando ligado: z.coerce.boolean() trata "false" como verdadeiro, então
   // o parâmetro ausente é a única forma segura de dizer "não".
   if (params.expanded) search.set("expanded", "true");
+
+  for (const [key, value] of Object.entries(params.drill ?? {})) {
+    if (value) search.set(key, value);
+  }
 
   return discoverResultSchema.parse(
     await request(`/jobs/discover?${search.toString()}`),

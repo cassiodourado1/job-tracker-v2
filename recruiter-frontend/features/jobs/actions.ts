@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import type {
-  FillReport, DiscoverResult, JobSearchResult, JobSort } from "@recruit/shared";
+  FillReport, DiscoverResult, JobDrilldown, JobSearchResult, JobSort } from "@recruit/shared";
 import {
   ApiError as ApplicationApiError,
   createApplication,
@@ -101,7 +101,7 @@ export async function applyToJobAction(
 ): Promise<JobActionState> {
   try {
     await registerApplied(profileId, jobId);
-    revalidatePath("/");
+    revalidatePath("/candidaturas");
     revalidatePath("/vagas/salvas");
 
     return { status: "success" };
@@ -122,7 +122,7 @@ export async function markAppliedAction(
     const saved = await saveJob(profileId, result);
 
     await registerApplied(profileId, saved.jobId);
-    revalidatePath("/");
+    revalidatePath("/candidaturas");
     revalidatePath("/vagas/salvas");
 
     return { status: "success" };
@@ -202,6 +202,7 @@ export async function discoverAction(params: {
   q?: string;
   expanded?: boolean;
   sort?: JobSort;
+  drill?: JobDrilldown;
 }): Promise<DiscoverState> {
   try {
     return { status: "success", result: await discoverJobs(params) };

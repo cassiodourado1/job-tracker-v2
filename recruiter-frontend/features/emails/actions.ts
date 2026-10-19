@@ -59,7 +59,7 @@ export async function linkEmailAction(
   try {
     await linkEmail(id, applicationId);
     revalidatePath("/emails");
-    revalidatePath("/");
+    revalidatePath("/candidaturas");
 
     return { status: "success" };
   } catch (error) {
@@ -89,7 +89,7 @@ export async function createFromEmailAction(
   try {
     await createApplicationFromEmail(id, parsed.data);
     revalidatePath("/emails");
-    revalidatePath("/");
+    revalidatePath("/candidaturas");
 
     return { status: "success" };
   } catch (error) {
@@ -172,7 +172,7 @@ export async function applyResolutionsAction(
     const result = await applyResolutions(parsed.data);
 
     revalidatePath("/emails");
-    revalidatePath("/");
+    revalidatePath("/candidaturas");
     revalidatePath("/metricas");
 
     return { status: "success", result };

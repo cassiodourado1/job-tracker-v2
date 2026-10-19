@@ -5,6 +5,7 @@ import {
   jobSearchResultSchema,
   workModelSchema,
 } from './job';
+import { jobDrilldownSchema } from './jobs-dashboard';
 
 /**
  * Preferências de vaga — o filtro que o currículo NÃO tem como adivinhar.
@@ -319,6 +320,7 @@ export const discoverJobsSchema = z.strictObject({
    * acervo numa resposta. Opt-in porque custa segundos.
    */
   expanded: z.coerce.boolean().optional(),
+  ...jobDrilldownSchema.shape,
 });
 
 export type DiscoverJobsQuery = z.infer<typeof discoverJobsSchema>;

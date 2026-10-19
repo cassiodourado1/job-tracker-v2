@@ -190,7 +190,7 @@ function SavedCard({
                 é o clique depois de enviar no site da empresa. */}
             {application ? (
               <Link
-                href="/"
+                href="/candidaturas"
                 className="whitespace-nowrap rounded-lg bg-zinc-900 px-2.5 py-1.5 text-sm font-medium text-white transition hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
               >
                 Acompanhar candidatura

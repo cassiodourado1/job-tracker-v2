@@ -74,6 +74,14 @@ export function IconChart() {
   );
 }
 
+export function IconBars() {
+  return (
+    <svg {...iconProps}>
+      <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+    </svg>
+  );
+}
+
 export function IconPlus({ size = 16 }: { size?: number }) {
   return (
     <svg {...iconProps} width={size} height={size}>
