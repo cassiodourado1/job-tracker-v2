@@ -61,10 +61,20 @@ export function AppShell({
               className="h-8 w-8 overflow-hidden rounded-full ring-1 ring-white/10 [&>svg]:h-full [&>svg]:w-full"
               dangerouslySetInnerHTML={{ __html: avatar }}
             />
-            <div className="hidden flex-col leading-tight md:flex">
-              <span className="text-sm font-medium">{name}</span>
+            {/* Largura limitada: o título que vem do currículo importado
+                pode ter uma linha inteira, e empurrava o menu para fora da
+                tela. O texto completo fica no `title`. */}
+            <div className="hidden max-w-56 min-w-0 flex-col leading-tight md:flex">
+              <span className="truncate text-sm font-medium" title={name}>
+                {name}
+              </span>
               {headline && (
-                <span className="text-xs text-zinc-400">{headline}</span>
+                <span
+                  className="truncate text-xs text-zinc-400"
+                  title={headline}
+                >
+                  {headline}
+                </span>
               )}
             </div>
             <button

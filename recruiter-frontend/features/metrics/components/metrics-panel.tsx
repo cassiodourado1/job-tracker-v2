@@ -1,5 +1,6 @@
 import type { Metrics } from "@recruit/shared";
-import { CountUp, Tilt } from "@/components/motion";
+import { DashboardHeader, Panel, Tile } from "@/components/dashboard";
+import { CountUp } from "@/components/motion";
 import { AreaChart } from "./area-chart";
 import { FunnelChart } from "./funnel-chart";
 import { SourceYieldChart } from "./source-yield";
@@ -21,12 +22,10 @@ export function MetricsPanel({ metrics }: { metrics: Metrics }) {
 
   return (
     <div className="flex w-full flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-3xl font-semibold">Métricas</h1>
-        <p className="text-sm text-zinc-400">
-          O que aconteceu depois que você se candidatou.
-        </p>
-      </header>
+      <DashboardHeader
+        title="Métricas"
+        subtitle="O que aconteceu depois que você se candidatou."
+      />
 
       {metrics.active === 0 ? (
         <p className="cine-glass rounded-2xl px-6 py-14 text-center text-sm text-zinc-400">
@@ -158,40 +157,6 @@ export function MetricsPanel({ metrics }: { metrics: Metrics }) {
 }
 
 /**
- * Um bloco do painel: vidro sobre a cena, entrando em cascata.
- *
- * Sem `Tilt` de propósito. Inclinar um bloco com gráfico faz o gráfico
- * inteiro balançar sob o cursor — justamente quando você está tentando ler um
- * ponto dele. Os tiles, que são um número só, inclinam; os gráficos não.
- */
-function Panel({
-  index,
-  title,
-  subtitle,
-  className = "",
-  children,
-}: {
-  index: number;
-  title: string;
-  subtitle?: string;
-  className?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section
-      className={`cine-reveal cine-glass flex flex-col gap-4 rounded-2xl p-6 ${className}`}
-      style={{ ["--i" as string]: index }}
-    >
-      <div className="flex flex-col gap-1">
-        <h2 className="text-base font-semibold">{title}</h2>
-        {subtitle && <p className="text-xs text-zinc-400">{subtitle}</p>}
-      </div>
-      {children}
-    </section>
-  );
-}
-
-/**
  * Tempo até a primeira resposta.
  *
  * O número vem SEMPRE com a amostra ao lado. "5 dias" sobre uma resposta é um
@@ -248,33 +213,6 @@ function ResponseTime({
         data no histórico da candidatura.
       </span>
     </section>
-  );
-}
-
-function Tile({
-  index,
-  label,
-  value,
-  hint,
-}: {
-  index: number;
-  label: string;
-  value: number;
-  hint?: string;
-}) {
-  return (
-    <div className="cine-reveal" style={{ ["--i" as string]: index }}>
-      <Tilt className="h-full rounded-2xl" max={10}>
-        <div className="cine-glass flex h-full flex-col gap-1 rounded-2xl px-5 py-4">
-          <CountUp
-            value={value}
-            className="font-[family-name:var(--font-display)] text-3xl font-semibold"
-          />
-          <span className="text-xs font-medium text-zinc-300">{label}</span>
-          {hint && <span className="text-xs text-zinc-500">{hint}</span>}
-        </div>
-      </Tilt>
-    </div>
   );
 }
 

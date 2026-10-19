@@ -4,6 +4,7 @@ import type {
   JobsDashboard,
   WorkModel,
 } from "@recruit/shared";
+import { DashboardHeader, Panel, Tile } from "@/components/dashboard";
 import { TimelineChart } from "@/features/market/components/timeline-chart";
 import {
   seriesOf,
@@ -40,40 +41,40 @@ export function MarketDashboard({ data }: { data: JobsDashboard }) {
     data.total === 0 ? 0 : Math.round((value / data.total) * 100);
 
   return (
-    <div className="market-viz mx-auto flex w-full max-w-6xl flex-col gap-5">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-xl font-semibold tracking-tight">Mercado</h1>
-          <p className="text-sm text-zinc-400">
-            Vagas que passam nos seus filtros, publicadas nas últimas{" "}
-            {WINDOW_LABEL[window]} · atualizado às {formatTime(data.generatedAt)}
-          </p>
-        </div>
+    <div className="market-viz flex w-full flex-col gap-6">
+      <DashboardHeader
+        title="Mercado"
+        subtitle={`Vagas que passam nos seus filtros, publicadas nas últimas ${WINDOW_LABEL[window]} · atualizado às ${formatTime(data.generatedAt)}`}
+        actions={
+          <nav
+            aria-label="Período"
+            className="flex gap-1 rounded-xl bg-zinc-900 p-1"
+          >
+            {(Object.keys(WINDOW_LABEL) as DashboardWindow[]).map((option) => (
+              <Link
+                key={option}
+                href={`/?janela=${option}`}
+                aria-current={option === window ? "page" : undefined}
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                  option === window
+                    ? "bg-zinc-100 text-zinc-900"
+                    : "text-zinc-400 hover:text-zinc-100"
+                }`}
+              >
+                {WINDOW_LABEL[option]}
+              </Link>
+            ))}
+          </nav>
+        }
+      />
 
-        <nav aria-label="Período" className="flex gap-1 rounded-xl bg-zinc-900 p-1">
-          {(Object.keys(WINDOW_LABEL) as DashboardWindow[]).map((option) => (
-            <Link
-              key={option}
-              href={`/?janela=${option}`}
-              aria-current={option === window ? "page" : undefined}
-              className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-                option === window
-                  ? "bg-zinc-100 text-zinc-900"
-                  : "text-zinc-400 hover:text-zinc-100"
-              }`}
-            >
-              {WINDOW_LABEL[option]}
-            </Link>
-          ))}
-        </nav>
-      </header>
-
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Tile
+          index={0}
           label={`Vagas publicadas (${WINDOW_LABEL[window]})`}
           value={data.total}
           href={vagas()}
-          note={
+          hint={
             // Só na janela de 24h: vaga velha sai do ar e some da fonte, então
             // a janela anterior de 7 ou 30 dias sempre parece menor do que foi.
             window === "24h" ? (
@@ -84,26 +85,30 @@ export function MarketDashboard({ data }: { data: JobsDashboard }) {
           }
         />
         <Tile
+          index={1}
           label="Remotas"
           value={data.remote}
           href={vagas({ modalidade: "remoto" })}
-          note={`${percent(data.remote)}% das vagas publicadas`}
+          hint={`${percent(data.remote)}% das vagas publicadas`}
         />
         <Tile
+          index={2}
           label="Empresas contratando"
           value={data.companies}
-          note="com pelo menos uma vaga no período"
+          hint="com pelo menos uma vaga no período"
         />
         <Tile
+          index={3}
           label="Sem data de publicação"
           value={data.undated}
-          note="passam nos filtros, mas não entram nos números"
+          hint="passam nos filtros, mas não entram nos números"
         />
-      </div>
+      </section>
 
-      <div className="grid gap-4 lg:grid-cols-5">
-        <Card
-          className="lg:col-span-2"
+      <div className="grid gap-5 xl:grid-cols-5">
+        <Panel
+          index={4}
+          className="xl:col-span-2"
           title="Qual site tem mais vagas"
           subtitle={`Vagas publicadas nas últimas ${WINDOW_LABEL[window]}, por fonte`}
         >
@@ -118,19 +123,24 @@ export function MarketDashboard({ data }: { data: JobsDashboard }) {
             total={data.total}
             showShare
           />
-        </Card>
+        </Panel>
 
-        <Card
-          className="lg:col-span-3"
+        <Panel
+          index={5}
+          className="xl:col-span-3"
           title={`Vagas publicadas por ${window === "24h" ? "hora" : "dia"}`}
           subtitle="Pela data de publicação (horário de Brasília), empilhadas por fonte"
         >
           <TimelineChart timeline={data.timeline} window={window} />
-        </Card>
+        </Panel>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card title="Empresas que mais publicaram" subtitle="As 10 primeiras">
+      <div className="grid gap-5 xl:grid-cols-3">
+        <Panel
+          index={6}
+          title="Empresas que mais publicaram"
+          subtitle="As 10 primeiras"
+        >
           <Ranked
             rows={data.byCompany.map((row) => ({
               key: row.company,
@@ -139,9 +149,10 @@ export function MarketDashboard({ data }: { data: JobsDashboard }) {
               count: row.count,
             }))}
           />
-        </Card>
+        </Panel>
 
-        <Card
+        <Panel
+          index={7}
           title="Tecnologias mais pedidas"
           subtitle="Quantas vagas citam cada uma"
         >
@@ -153,9 +164,13 @@ export function MarketDashboard({ data }: { data: JobsDashboard }) {
               count: row.count,
             }))}
           />
-        </Card>
+        </Panel>
 
-        <Card title="Modalidade" subtitle="Como as vagas declaram o trabalho">
+        <Panel
+          index={8}
+          title="Modalidade"
+          subtitle="Como as vagas declaram o trabalho"
+        >
           <Ranked
             rows={data.byWorkModel.map((row) => ({
               key: row.workModel ?? "nao-informa",
@@ -168,7 +183,7 @@ export function MarketDashboard({ data }: { data: JobsDashboard }) {
             total={data.total}
             showShare
           />
-        </Card>
+        </Panel>
       </div>
 
       {data.failedSources.length > 0 && (
@@ -178,43 +193,6 @@ export function MarketDashboard({ data }: { data: JobsDashboard }) {
         </p>
       )}
     </div>
-  );
-}
-
-/** Com `href`, o card inteiro é o link para as vagas que ele contou. */
-function Tile({
-  label,
-  value,
-  note,
-  href,
-}: {
-  label: string;
-  value: number;
-  note: React.ReactNode;
-  href?: string;
-}) {
-  const content = (
-    <>
-      <h2 className="text-sm text-zinc-400">{label}</h2>
-      <span className="text-4xl font-semibold tabular-nums tracking-tight">
-        {value}
-      </span>
-      <span className="text-xs text-zinc-500">{note}</span>
-    </>
-  );
-
-  return href ? (
-    <Link
-      href={href}
-      title="Ver estas vagas"
-      className="cine-glass flex flex-col gap-1 rounded-2xl p-5 transition hover:ring-1 hover:ring-zinc-600"
-    >
-      {content}
-    </Link>
-  ) : (
-    <section className="cine-glass flex flex-col gap-1 rounded-2xl p-5">
-      {content}
-    </section>
   );
 }
 
@@ -234,30 +212,6 @@ function Trend({ now, before }: { now: number; before: number }) {
       </span>{" "}
       vs. 24 h anteriores ({before})
     </>
-  );
-}
-
-function Card({
-  title,
-  subtitle,
-  className = "",
-  children,
-}: {
-  title: string;
-  subtitle: string;
-  className?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section
-      className={`cine-glass flex min-w-0 flex-col gap-4 rounded-2xl p-5 ${className}`}
-    >
-      <div className="flex flex-col gap-0.5">
-        <h2 className="text-sm font-semibold">{title}</h2>
-        <p className="text-xs text-zinc-400">{subtitle}</p>
-      </div>
-      {children}
-    </section>
   );
 }
 
@@ -308,7 +262,7 @@ function Ranked({
                 ) : null}
               </span>
             </div>
-            <div className="h-1.5 rounded-full bg-zinc-800">
+            <div className="h-2 rounded-full bg-zinc-800">
               <div
                 className="h-full rounded-full"
                 style={{

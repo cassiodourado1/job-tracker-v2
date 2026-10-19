@@ -7,10 +7,10 @@ export function MarketLoading() {
     <div
       role="status"
       aria-live="polite"
-      className="mx-auto flex w-full max-w-6xl flex-col gap-5"
+      className="flex w-full flex-col gap-6"
     >
       <span className="text-sm text-zinc-400">Consultando os portais…</span>
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         {Array.from({ length: 4 }, (_, index) => (
           <div
             key={index}
