@@ -79,10 +79,9 @@ export function matches(
     return false;
   }
 
-  // Tecnologias, por padrão, só reordenam (ver `scoring.ts`). Com
-  // `requireStacks`, cortam: fica só a vaga que cita uma das marcadas.
+  // Tecnologias marcadas cortam por "ou": basta a vaga citar uma delas.
+  // Antes só reordenavam, e marcar Drupal deixava a lista cheia de .NET.
   if (
-    preferences.requireStacks &&
     preferences.stacks.length > 0 &&
     !job.stack.some((stack) => preferences.stacks.includes(stack as StackLabel))
   ) {

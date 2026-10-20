@@ -22,9 +22,9 @@ import {
 /**
  * O filtro da descoberta.
  *
- * Duas naturezas convivem aqui, e a tela precisa deixar isso claro: escopo,
- * modalidade, contrato e senioridade CORTAM; stack PRIORIZA. Cortar por stack
- * sumiria com metade do acervo por falta de descrição, não por não combinar.
+ * Tudo aqui corta: escopo, modalidade, contrato, senioridade e stack — esta
+ * por "ou", basta a vaga citar uma das marcadas. O texto da stack avisa que
+ * vaga sem descrição só revela a tecnologia pelo título.
  *
  * Nada é aplicado enquanto você marca — só ao confirmar. Marcar dispara busca
  * a cada clique seria uma rodada nos portais por caixinha.
@@ -273,7 +273,7 @@ export function FiltersModal({
 
           <Group
             title="Tecnologias"
-            hint="Por padrão estas só PRIORIZAM: marcar Go sobe as vagas de Go sem esconder as outras. Para ver só as que citam uma delas, marque a opção abaixo."
+            hint="Mostra só as vagas que citam pelo menos uma das marcadas: Drupal e WordPress traz quem pede uma ou outra. Vaga sem descrição só revela a tecnologia pelo título."
           >
             <AllChip
               label="todas"
@@ -290,18 +290,6 @@ export function FiltersModal({
                 }
               />
             ))}
-            <label className="mt-1 flex w-full cursor-pointer items-center gap-2 text-xs text-zinc-600 dark:text-zinc-300">
-              <input
-                type="checkbox"
-                checked={draft.requireStacks}
-                disabled={draft.stacks.length === 0}
-                onChange={(event) =>
-                  patch({ requireStacks: event.target.checked })
-                }
-                className="size-4 cursor-pointer accent-zinc-900 disabled:cursor-not-allowed disabled:opacity-40 dark:accent-zinc-100"
-              />
-              Mostrar só vagas que citam uma destas tecnologias
-            </label>
           </Group>
         </div>
 
