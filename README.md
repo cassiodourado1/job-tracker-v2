@@ -25,8 +25,8 @@ sugere o novo status. Você confirma com um clique.
 | Funcionalidade | Precisa de chave da Anthropic? |
 | --- | --- |
 | Candidaturas: cadastro, status, histórico, busca, filtros e ordenação | não |
-| Descoberta de vagas em Gupy, Remotar, Nerdin, Programathor, Greenhouse, Lever, Ashby, agregadores remotos, portais brasileiros e alertas do LinkedIn | não |
-| Empresas acompanhadas: todas as vagas de empresas que você escolhe, na Gupy, InHire, Greenhouse, Lever ou Ashby | não |
+| Descoberta de vagas em Gupy, Remotar, Nerdin, Programathor, GeekHunter, Greenhouse, Lever, Ashby, agregadores remotos, portais brasileiros e alertas do LinkedIn | não |
+| Empresas acompanhadas: todas as vagas de empresas que você escolhe, na Gupy, InHire, Greenhouse, Lever, Ashby ou Workday | não |
 | Lista de vagas com contador, anúncios repetidos da mesma vaga num card só e ordenação (mais recentes, relevância, empresa, cargo) | não |
 | Currículo estruturado, import do LinkedIn, PDF pela impressão do navegador e versão congelada em cada candidatura | não |
 | Preenchimento de formulário de candidatura no Chrome, parando antes do envio | não |
@@ -194,11 +194,16 @@ endereço, e a tela mostra na hora se reconheceu:
 | Greenhouse | `boards.greenhouse.io/empresa` |
 | Lever | `jobs.lever.co/empresa` |
 | Ashby | `jobs.ashbyhq.com/empresa` |
+| Workday | `empresa.wd5.myworkdayjobs.com/SiteDeVagas` |
 
 Muitas empresas não têm sistema de vagas próprio: a página "Vagas" do site
 mostra vagas hospedadas numa dessas plataformas. Abra uma vaga no site da
 empresa e veja para onde o link aponta. O site da CI&T, por exemplo, já é
-reconhecido e lido pela Lever dela. Empresas em Workday, SuccessFactors ou
+reconhecido e lido pela Lever dela.
+
+Na Workday, onde ficam empresas grandes como a Accenture, o app lê só as vagas
+do Brasil e só a lista: sem descrição, porque a Workday bloqueia por alguns
+minutos quem faz muitas consultas seguidas. Empresas em SuccessFactors ou
 Oracle não são lidas.
 
 Também dá para fixar boards no `.env`, valendo para todos os perfis. Liste os
