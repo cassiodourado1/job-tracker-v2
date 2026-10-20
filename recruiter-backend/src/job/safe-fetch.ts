@@ -280,9 +280,15 @@ export async function fetchPublicJson(
    * padrão; não os substituem.
    */
   headers: Record<string, string> = {},
+  /**
+   * Corpo de uma consulta por POST, para API de busca que só aceita assim — a
+   * Workday recebe a página e o filtro de país no corpo. Ausente, é GET.
+   */
+  query?: unknown,
 ): Promise<unknown> {
   const { body } = await fetchCapped(rawUrl, {
     headers,
+    query,
     accept: 'application/json',
     allowedContent: ['application/json'],
     maxBytes: MAX_JSON_BYTES,
@@ -298,6 +304,8 @@ export async function fetchPublicJson(
 
 interface FetchOptions {
   headers?: Record<string, string>;
+  /** Presente: POST com este JSON no corpo. */
+  query?: unknown;
   accept: string;
   allowedContent: string[];
   maxBytes: number;
@@ -327,8 +335,14 @@ async function fetchCapped(
         // deixaria o redirecionamento contornar tudo acima.
         redirect: 'manual',
         signal: AbortSignal.timeout(TIMEOUT_MS),
+        ...(options.query === undefined
+          ? {}
+          : { method: 'POST', body: JSON.stringify(options.query) }),
         headers: {
           ...options.headers,
+          ...(options.query === undefined
+            ? {}
+            : { 'Content-Type': 'application/json' }),
           // Sem cookies, sem credenciais, sem cabeçalho de origem.
           // ASCII puro: caractere acentuado aqui leva 403 de WAF — a Ashby
           // recusa a mesma requisição só por causa do cabeçalho. Medido.
@@ -346,6 +360,12 @@ async function fetchCapped(
     }
 
     if (response.status >= 300 && response.status < 400) {
+      // Consulta por POST não se repete em outro endereço: quem redireciona
+      // uma API de busca mudou de lugar, e reenviar às cegas não é seguro.
+      if (options.query !== undefined) {
+        throw new FetchError('A API de busca redirecionou a consulta.');
+      }
+
       const location = response.headers.get('location');
 
       if (!location) {
