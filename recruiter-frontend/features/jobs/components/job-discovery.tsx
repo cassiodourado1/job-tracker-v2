@@ -215,11 +215,7 @@ export function JobDiscovery({
 
   return (
     <div className="mx-auto flex w-full max-w-[110rem] flex-col gap-4">
-      {/* Cabeçalho e extração seguem estreitos: texto em linha larga é ruim de
-          ler. Só a grade de vagas aproveita a tela inteira. */}
-      <div className="max-w-4xl">
-        <JobsTabs savedCount={savedCount} />
-      </div>
+      <JobsTabs savedCount={savedCount} />
 
       <section className="cine-reveal cine-glass flex flex-col gap-3 rounded-2xl p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">

@@ -9,6 +9,11 @@ import { usePathname } from "next/navigation";
  *
  * Pílulas, e não sublinhado, para não competir com a navegação principal: são
  * dois níveis diferentes, e ficar igual confundiria qual está ativa.
+ *
+ * Fixa logo abaixo do cabeçalho ao rolar: com centenas de cards, voltar ao
+ * topo para trocar de aba custava uma rolagem inteira. O vidro e as margens
+ * negativas cobrem a largura do conteúdo, para os cards passarem por baixo
+ * sem aparecer entre as pílulas.
  */
 export function JobsTabs({ savedCount }: { savedCount: number }) {
   const pathname = usePathname();
@@ -19,7 +24,10 @@ export function JobsTabs({ savedCount }: { savedCount: number }) {
   ];
 
   return (
-    <nav aria-label="Vagas" className="flex items-center gap-1">
+    <nav
+      aria-label="Vagas"
+      className="sticky top-16 z-30 -mx-6 -mt-3 flex items-center gap-1 border-b border-white/5 bg-zinc-950/90 px-6 py-3 backdrop-blur-xl backdrop-saturate-150"
+    >
       {tabs.map((tab) => {
         const active = pathname === tab.href;
 
