@@ -24,7 +24,6 @@ function preferences(over: Partial<JobPreferences> = {}): JobPreferences {
     titleExcludes: [],
     linkedinMaxAgeDays: 14,
     hideUndeclaredWorkModel: false,
-    stackMatch: 'any',
     searchTerms: ['desenvolvedor'],
     companyPages: [],
     ...over,
@@ -217,16 +216,6 @@ describe('tecnologias', () => {
     expect(matches(comStack(['PHP', 'Drupal']), filtro)).toBe(true);
     expect(matches(comStack(['WordPress']), filtro)).toBe(true);
     expect(matches(comStack([]), filtro)).toBe(false);
-  });
-
-  it('com "todas", fica só a vaga que cita todas as marcadas ("e")', () => {
-    const filtro = preferences({
-      stacks: ['Drupal', 'PHP'],
-      stackMatch: 'all',
-    });
-
-    expect(matches(comStack(['Drupal']), filtro)).toBe(false);
-    expect(matches(comStack(['PHP', 'Drupal', 'Vue']), filtro)).toBe(true);
   });
 
   it('sem nenhuma marcada, não corta nada', () => {
