@@ -11,6 +11,7 @@ import {
   contractTypeFromLabel,
   seniorityFromTitle,
   stackFromText,
+  workModelFromTitle,
 } from '../normalize';
 import type { DiscoveryQuery, DiscoverySource } from '../provider';
 import { parseEach } from '../provider';
@@ -20,7 +21,7 @@ import { workModelFromGupy } from './gupy';
  * Empresas acompanhadas que não estão em Greenhouse, Lever ou Ashby — essas
  * três já têm fonte própria e recebem a lista do perfil por `boardsFor`.
  *
- * Aqui entram Gupy e InHire, lidas pela página de carreira da EMPRESA, e não
+ * Aqui entram Gupy, InHire e Workday, lidas pela página de carreira da EMPRESA, e não
  * pela busca do portal: a busca só acha o que casa com os seus termos; a
  * página da empresa traz todas as vagas dela. É o que faz "acompanhar a
  * CI&T" ser diferente de "procurar front-end".
@@ -36,13 +37,15 @@ const COMPANY_CONCURRENCY = 3;
 export class CompanyPagesSource implements DiscoverySource {
   readonly name = 'empresas';
 
-  readonly deadlineMs = 30_000;
+  /** A Workday lê em páginas, com pausa entre elas: mais fôlego que as outras. */
+  readonly deadlineMs = 40_000;
 
   private readonly logger = new Logger(CompanyPagesSource.name);
 
   private readonly readers: Partial<Record<WatchedPlatform, Reader>> = {
     gupy: readGupyCompany,
     inhire: readInhireCompany,
+    workday: readWorkdayCompany,
   };
 
   async fetch(query: DiscoveryQuery): Promise<JobSearchResult[]> {
@@ -323,4 +326,258 @@ function workModelFromInhire(
     default:
       return null;
   }
+}
+
+/* ------------------------------- Workday ------------------------------ */
+
+/**
+ * A Workday é onde empresas grandes publicam vagas (Accenture, Avanade…). A
+ * página monta a lista no navegador, a partir da API pública que ela mesma
+ * usa: `POST /wday/cxs/<empresa>/<site>/jobs`, com filtro e página no corpo.
+ *
+ * O acervo é mundial — 2.000 vagas na Accenture — e o que interessa é o
+ * Brasil: a primeira consulta só descobre o código do país nos filtros, e as
+ * seguintes leem as vagas dele, 20 por página. A lista não traz descrição; ler
+ * vaga por vaga multiplicaria as chamadas, e a Workday responde 429 rápido a
+ * quem insiste. Por isso poucas páginas, em sequência, com pausa (§5).
+ */
+
+const WORKDAY_PAGE = 20;
+const WORKDAY_MAX_PAGES = 5;
+const WORKDAY_DELAY_MS = 1_000;
+
+const workdayFacetValueSchema = z.object({
+  descriptor: z.string().nullish(),
+  id: z.string().nullish(),
+  facetParameter: z.string().nullish(),
+  get values() {
+    return z.array(workdayFacetValueSchema).nullish();
+  },
+});
+
+const workdayListSchema = z.object({
+  total: z.number().int().nullish(),
+  jobPostings: z.array(z.unknown()),
+  facets: z
+    .array(
+      z.object({
+        facetParameter: z.string(),
+        values: z.array(workdayFacetValueSchema).nullish(),
+      }),
+    )
+    .nullish(),
+});
+
+const workdayJobSchema = z.object({
+  title: z.string().min(1),
+  externalPath: z.string().startsWith('/'),
+  locationsText: z.string().nullish(),
+  postedOn: z.string().nullish(),
+});
+
+export async function readWorkdayCompany(
+  slug: string,
+  now: Date = new Date(),
+  delay: (ms: number) => Promise<void> = sleep,
+): Promise<JobSearchResult[]> {
+  const parts = /^([a-z0-9-]+)\.(wd\d+)\/([A-Za-z0-9_-]+)$/.exec(slug);
+
+  if (!parts) {
+    throw new Error('identificador da Workday inválido');
+  }
+
+  const [, tenant, pod, site] = parts;
+  const origin = `https://${tenant}.${pod}.myworkdayjobs.com`;
+  const api = `${origin}/wday/cxs/${tenant}/${site}/jobs`;
+  const ask = async (body: object) => {
+    const parsed = workdayListSchema.safeParse(
+      await fetchPublicJson(api, {}, body),
+    );
+
+    if (!parsed.success) {
+      throw new Error('resposta sem a lista de vagas — a API mudou');
+    }
+
+    return parsed.data;
+  };
+
+  const first = await ask({
+    appliedFacets: {},
+    limit: 1,
+    offset: 0,
+    searchText: '',
+  });
+  const brazil = brazilFacet(first.facets ?? []);
+
+  // Empresa sem vaga no Brasil: nada a ler, e nada de erro.
+  if (!brazil) {
+    return [];
+  }
+
+  const company = workdayCompanyName(site, tenant);
+  const found: JobSearchResult[] = [];
+
+  for (let page = 0; page < WORKDAY_MAX_PAGES; page += 1) {
+    await delay(WORKDAY_DELAY_MS);
+
+    let list: z.infer<typeof workdayListSchema>;
+
+    try {
+      list = await ask({
+        appliedFacets: { [brazil.parameter]: [brazil.id] },
+        limit: WORKDAY_PAGE,
+        offset: page * WORKDAY_PAGE,
+        searchText: '',
+      });
+    } catch (error) {
+      // A Workday corta com 429 quem pede muito seguido. No meio da
+      // leitura, as páginas já lidas valem; só a primeira derruba a empresa.
+      if (page > 0) {
+        break;
+      }
+
+      throw error;
+    }
+
+    found.push(
+      ...parseEach(list.jobPostings, (raw) =>
+        workdayJobToResult(raw, origin, site, company, now),
+      ).ok,
+    );
+
+    if (
+      list.jobPostings.length < WORKDAY_PAGE ||
+      (page + 1) * WORKDAY_PAGE >= (list.total ?? 0)
+    ) {
+      break;
+    }
+  }
+
+  return found;
+}
+
+/**
+ * O filtro "Brasil" da empresa: o país vem como valor de um grupo de
+ * localização, e o nome do parâmetro (`locationCountry`, `Location_Country`…)
+ * varia de empresa para empresa — por isso se procura pelo nome do país.
+ */
+export function brazilFacet(
+  facets: z.infer<typeof workdayListSchema>['facets'] & object,
+): { parameter: string; id: string } | null {
+  const visit = (
+    values: z.infer<typeof workdayFacetValueSchema>[],
+    parameter: string,
+  ): { parameter: string; id: string } | null => {
+    for (const value of values) {
+      if (value.values) {
+        const found = visit(value.values, value.facetParameter ?? parameter);
+
+        if (found) {
+          return found;
+        }
+      } else if (
+        value.id &&
+        /^(brazil|brasil)$/i.test(value.descriptor?.trim() ?? '')
+      ) {
+        return { parameter, id: value.id };
+      }
+    }
+
+    return null;
+  };
+
+  for (const facet of facets) {
+    const found = visit(facet.values ?? [], facet.facetParameter);
+
+    if (found && /country/i.test(found.parameter)) {
+      return found;
+    }
+  }
+
+  return null;
+}
+
+export function workdayJobToResult(
+  raw: unknown,
+  origin: string,
+  site: string,
+  company: string,
+  now: Date,
+): JobSearchResult | null {
+  const parsed = workdayJobSchema.safeParse(raw);
+
+  if (!parsed.success) {
+    return null;
+  }
+
+  const job = parsed.data;
+  const url = canonicalJobUrl(`${origin}/${site}${job.externalPath}`);
+
+  if (!url) {
+    return null;
+  }
+
+  const title = job.title.trim();
+  const place = job.locationsText?.trim();
+
+  return {
+    company,
+    title,
+    url,
+    source: 'empresas',
+    description: null,
+    stack: stackFromText(title),
+    requirements: [],
+    benefits: [],
+    seniority: seniorityFromTitle(title),
+    workModel: workModelFromTitle(title),
+    contractType: null,
+    // A lista já vem filtrada pelo Brasil; "2 Locations" e afins não são
+    // lugar, e viram só o país.
+    location:
+      place && !/^\d+ locations?$/i.test(place) ? `${place}, Brasil` : 'Brasil',
+    salaryMin: null,
+    salaryMax: null,
+    salaryCurrency: null,
+    weeklyHours: null,
+    postedAt: postedOnToIso(job.postedOn ?? null, now),
+  };
+}
+
+/**
+ * "Posted Today", "Posted Yesterday", "Posted 5 Days Ago". "30+ Days Ago" não
+ * é data, é teto: vira nula em vez de uma data inventada.
+ */
+export function postedOnToIso(label: string | null, now: Date): string | null {
+  const value = (label ?? '').toLowerCase();
+  const day = 24 * 60 * 60 * 1000;
+
+  if (value.includes('today')) {
+    return now.toISOString();
+  }
+
+  if (value.includes('yesterday')) {
+    return new Date(now.getTime() - day).toISOString();
+  }
+
+  const days = /posted (\d+) days? ago/.exec(value);
+
+  return days
+    ? new Date(now.getTime() - Number(days[1]) * day).toISOString()
+    : null;
+}
+
+/** "AccentureCareers" → "Accenture"; sem nada a tirar, o nome da empresa na URL. */
+export function workdayCompanyName(site: string, tenant: string): string {
+  const name = site
+    .replace(/(external|leadership)?(careers?|jobs?|site)?$/i, '')
+    .replace(/[_-]+/g, ' ')
+    .trim();
+  const base = name || tenant;
+
+  return base.charAt(0).toUpperCase() + base.slice(1);
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
