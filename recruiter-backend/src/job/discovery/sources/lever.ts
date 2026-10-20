@@ -38,8 +38,18 @@ const leverJobSchema = z.object({
     .nullish(),
 });
 
+/** Cabe a resposta mais lenta medida, com folga. */
+const LEVER_TIMEOUT_MS = 30_000;
+
 export class LeverSource implements DiscoverySource {
   readonly name = 'lever';
+
+  /**
+   * A Lever devolve o board inteiro com descrições numa resposta só: 3,4 MB
+   * na CI&T, de 5 a 12 segundos medidos em outubro de 2026. O prazo padrão
+   * cortava a resposta e a empresa sumia da rodada sem aviso.
+   */
+  readonly deadlineMs = 35_000;
 
   /**
    * Os slugs do `.env` — ver `watchlist.ts`. A cada rodada somam-se as
@@ -52,6 +62,8 @@ export class LeverSource implements DiscoverySource {
       boardsFor(query, 'lever', this.boards).map(async (slug) => {
         const payload = await fetchPublicJson(
           `https://api.lever.co/v0/postings/${slug}?mode=json`,
+          {},
+          { timeoutMs: LEVER_TIMEOUT_MS },
         );
 
         if (!Array.isArray(payload)) {

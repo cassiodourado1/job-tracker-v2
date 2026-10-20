@@ -14,7 +14,7 @@ const SLOTS: Record<string, number> = {
   "linkedin-alerts": 4,
   programathor: 5,
   empresas: 6,
-  remoteok: 7,
+  geekhunter: 7,
 };
 
 export const OTHER = "outras";
@@ -26,6 +26,7 @@ const LABELS: Record<string, string> = {
   "linkedin-alerts": "Alertas LinkedIn",
   programathor: "Programathor",
   empresas: "Páginas de empresas",
+  geekhunter: "GeekHunter",
   remoteok: "RemoteOK",
   remotive: "Remotive",
   greenhouse: "Greenhouse",
