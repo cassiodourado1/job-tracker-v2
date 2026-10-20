@@ -391,7 +391,7 @@ export async function readWorkdayCompany(
   const api = `${origin}/wday/cxs/${tenant}/${site}/jobs`;
   const ask = async (body: object) => {
     const parsed = workdayListSchema.safeParse(
-      await fetchPublicJson(api, {}, body),
+      await fetchPublicJson(api, {}, { query: body }),
     );
 
     if (!parsed.success) {

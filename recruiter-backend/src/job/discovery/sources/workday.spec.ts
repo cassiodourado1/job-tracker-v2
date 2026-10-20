@@ -61,7 +61,7 @@ describe('readWorkdayCompany', () => {
 
     const jobs = await readWorkdayCompany('acme.wd5/AcmeCareers', NOW, noDelay);
 
-    const [, , filtered] = fetchJson.mock.calls[1];
+    const [, , { query: filtered } = {}] = fetchJson.mock.calls[1];
 
     expect(fetchJson.mock.calls[1][0]).toBe(
       'https://acme.wd5.myworkdayjobs.com/wday/cxs/acme/AcmeCareers/jobs',

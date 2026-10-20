@@ -280,15 +280,20 @@ export async function fetchPublicJson(
    * padrão; não os substituem.
    */
   headers: Record<string, string> = {},
-  /**
-   * Corpo de uma consulta por POST, para API de busca que só aceita assim — a
-   * Workday recebe a página e o filtro de país no corpo. Ausente, é GET.
-   */
-  query?: unknown,
+  options: {
+    /**
+     * Corpo de uma consulta por POST, para API de busca que só aceita assim
+     * — a Workday recebe a página e o filtro de país no corpo. Ausente, é GET.
+     */
+    query?: unknown;
+    /** Para API sabidamente lenta; o padrão serve a quase todas. */
+    timeoutMs?: number;
+  } = {},
 ): Promise<unknown> {
   const { body } = await fetchCapped(rawUrl, {
     headers,
-    query,
+    query: options.query,
+    timeoutMs: options.timeoutMs,
     accept: 'application/json',
     allowedContent: ['application/json'],
     maxBytes: MAX_JSON_BYTES,
@@ -306,6 +311,7 @@ interface FetchOptions {
   headers?: Record<string, string>;
   /** Presente: POST com este JSON no corpo. */
   query?: unknown;
+  timeoutMs?: number;
   accept: string;
   allowedContent: string[];
   maxBytes: number;
@@ -334,7 +340,7 @@ async function fetchCapped(
         // Manual: cada salto passa pela validação de novo. Seguir automático
         // deixaria o redirecionamento contornar tudo acima.
         redirect: 'manual',
-        signal: AbortSignal.timeout(TIMEOUT_MS),
+        signal: AbortSignal.timeout(options.timeoutMs ?? TIMEOUT_MS),
         ...(options.query === undefined
           ? {}
           : { method: 'POST', body: JSON.stringify(options.query) }),
