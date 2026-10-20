@@ -17,7 +17,8 @@
  *               da vaga E o canal de origem ("gupy_portal", "remotar"). A
  *               mesma vaga chega com tokens diferentes por canal.
  *   InHire      `/vagas/<uuid>/<nome-da-vaga>` pela Remotar e `/vagas/<uuid>`
- *               pela página da empresa: o nome no fim é enfeite.
+ *               pela página da empresa: para identificar, só o uuid conta.
+ *               Para ABRIR, o site precisa do nome — ver `openableJobUrl`.
  *   LinkedIn    /comm/jobs/view/123  vs  /jobs/view/123, `www.` vs `br.`,
  *               slug opcional antes do id, e oito parâmetros de rastreio
  */
@@ -93,9 +94,10 @@ export function canonicalJobUrl(rawUrl: string): string | null {
 /**
  * `/vagas/<uuid>/<nome>` da InHire reduzido a `/vagas/<uuid>`.
  *
- * A InHire identifica a vaga pelo uuid; o nome depois dele é só para leitura
- * e muda quando a empresa reescreve o título. Sem cortar, a mesma vaga vinda
- * da Remotar (com nome) e da página da empresa (sem nome) aparecia duas vezes.
+ * A InHire identifica a vaga pelo uuid; o nome depois dele muda quando a
+ * empresa reescreve o título. Sem cortar, a mesma vaga vinda da Remotar (com
+ * nome) e da página da empresa (sem nome) aparecia duas vezes. O link que se
+ * abre põe o nome de volta (`openableJobUrl`): sem ele a página vem vazia.
  */
 function inhireJobPath(hostname: string, path: string): string | null {
   if (!hostname.endsWith('.inhire.app')) {

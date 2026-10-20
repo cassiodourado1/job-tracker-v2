@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useEffect, useRef } from "react";
-import { APPLICATION_STATUSES } from "@recruit/shared";
+import { APPLICATION_STATUSES, openableJobUrl } from "@recruit/shared";
 import { Field } from "@/components/field";
 import {
   createApplicationAction,
@@ -195,7 +195,7 @@ function ViewMode({
   onClose: () => void;
 }) {
   const { job } = application;
-  const portalUrl = safeExternalUrl(job.url);
+  const portalUrl = safeExternalUrl(job.url && openableJobUrl(job.url, job.title));
 
   return (
     <div className="flex flex-col gap-5">
