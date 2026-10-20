@@ -24,6 +24,7 @@ function preferences(over: Partial<JobPreferences> = {}): JobPreferences {
     titleExcludes: [],
     linkedinMaxAgeDays: 14,
     hideUndeclaredWorkModel: false,
+    requireStacks: false,
     searchTerms: ['desenvolvedor'],
     companyPages: [],
     ...over,
@@ -203,5 +204,32 @@ describe('modalidade', () => {
         preferences({ hideUndeclaredWorkModel: true }),
       ),
     ).toBe(true);
+  });
+});
+
+describe('tecnologias', () => {
+  const comStack = (stack: string[]) => ({ ...job(null), stack });
+
+  it('por padrão só reordenam: vaga sem a tecnologia continua', () => {
+    expect(
+      matches(comStack(['Java']), preferences({ stacks: ['Drupal'] })),
+    ).toBe(true);
+  });
+
+  it('com a opção, fica só a vaga que cita uma das marcadas', () => {
+    const estrito = preferences({
+      stacks: ['Drupal', 'Vue'],
+      requireStacks: true,
+    });
+
+    expect(matches(comStack(['Java']), estrito)).toBe(false);
+    expect(matches(comStack(['PHP', 'Drupal']), estrito)).toBe(true);
+    expect(matches(comStack([]), estrito)).toBe(false);
+  });
+
+  it('a opção sem tecnologia marcada não corta nada', () => {
+    expect(matches(comStack([]), preferences({ requireStacks: true }))).toBe(
+      true,
+    );
   });
 });

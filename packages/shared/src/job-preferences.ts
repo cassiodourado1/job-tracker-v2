@@ -193,6 +193,13 @@ export const jobPreferencesSchema = z.object({
    * Com padrão, para as preferências gravadas antes dele continuarem válidas.
    */
   hideUndeclaredWorkModel: z.boolean().default(false),
+  /**
+   * Com tecnologias marcadas, mostra só a vaga que cita uma delas — sem isto
+   * elas só reordenam. Desligado por padrão pelo mesmo motivo da modalidade:
+   * vaga sem descrição só tem o título para revelar a stack, e cortar por
+   * ele esconde vaga boa. Com padrão, para preferências gravadas antes.
+   */
+  requireStacks: z.boolean().default(false),
   linkedinMaxAgeDays: z
     .number()
     .int()
@@ -280,6 +287,7 @@ export const defaultJobPreferences: JobPreferences = {
   ],
   linkedinMaxAgeDays: DEFAULT_LINKEDIN_MAX_AGE_DAYS,
   hideUndeclaredWorkModel: false,
+  requireStacks: false,
   searchTerms: DEFAULT_SEARCH_TERMS,
   companyPages: [],
 };

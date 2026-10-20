@@ -273,7 +273,7 @@ export function FiltersModal({
 
           <Group
             title="Tecnologias"
-            hint="Estas PRIORIZAM, não cortam: marcar Go sobe as vagas de Go sem esconder as outras."
+            hint="Por padrão estas só PRIORIZAM: marcar Go sobe as vagas de Go sem esconder as outras. Para ver só as que citam uma delas, marque a opção abaixo."
           >
             <AllChip
               label="todas"
@@ -290,6 +290,18 @@ export function FiltersModal({
                 }
               />
             ))}
+            <label className="mt-1 flex w-full cursor-pointer items-center gap-2 text-xs text-zinc-600 dark:text-zinc-300">
+              <input
+                type="checkbox"
+                checked={draft.requireStacks}
+                disabled={draft.stacks.length === 0}
+                onChange={(event) =>
+                  patch({ requireStacks: event.target.checked })
+                }
+                className="size-4 cursor-pointer accent-zinc-900 disabled:cursor-not-allowed disabled:opacity-40 dark:accent-zinc-100"
+              />
+              Mostrar só vagas que citam uma destas tecnologias
+            </label>
           </Group>
         </div>
 

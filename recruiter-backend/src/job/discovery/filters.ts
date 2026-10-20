@@ -2,6 +2,7 @@ import type {
   JobPreferences,
   JobSearchResult,
   Seniority,
+  StackLabel,
 } from '@recruit/shared';
 import { countryFromText, fold } from './normalize';
 
@@ -74,6 +75,16 @@ export function matches(
     (job.workModel === null
       ? preferences.hideUndeclaredWorkModel
       : !preferences.workModels.includes(job.workModel))
+  ) {
+    return false;
+  }
+
+  // Tecnologias, por padrão, só reordenam (ver `scoring.ts`). Com
+  // `requireStacks`, cortam: fica só a vaga que cita uma das marcadas.
+  if (
+    preferences.requireStacks &&
+    preferences.stacks.length > 0 &&
+    !job.stack.some((stack) => preferences.stacks.includes(stack as StackLabel))
   ) {
     return false;
   }
