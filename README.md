@@ -9,6 +9,16 @@ acontece depois que você se candidata.
 > de propósito, e isso só é seguro porque nada fica exposto na rede. Não
 > publique num servidor. Mais em [Segurança](#segurança).
 
+![Painel do Mercado: vagas publicadas nos últimos 7 dias, por fonte, por dia, por empresa e por tecnologia](docs/images/mercado.png)
+
+<p align="center">
+  <a href="#o-ciclo-de-uma-vaga">Como funciona</a> ·
+  <a href="#começando">Começando</a> ·
+  <a href="#telas">Telas</a> ·
+  <a href="#como-funciona-por-dentro">Por dentro</a> ·
+  <a href="#problemas-comuns">Problemas comuns</a>
+</p>
+
 ## Por que existe
 
 O difícil de procurar emprego não é a ferramenta, é o atrito de registrar
@@ -19,6 +29,31 @@ que está funcionando.
 A ideia aqui é registrar sem digitar. A vaga vem da descoberta, a confirmação
 de candidatura vem do email, e quando a empresa responde o Claude lê o email e
 sugere o novo status. Você confirma com um clique.
+
+### O ciclo de uma vaga
+
+```mermaid
+flowchart LR
+    subgraph Fontes
+        P["Portais<br/>Gupy, Remotar, Nerdin,<br/>GeekHunter, Programathor"]
+        E["Empresas acompanhadas<br/>Gupy, InHire, Greenhouse,<br/>Lever, Ashby, Workday"]
+        A["Alertas do LinkedIn<br/>pelo seu email"]
+    end
+
+    P --> D{{"Descoberta<br/>filtros do perfil"}}
+    E --> D
+    A --> D
+    D --> M["Mercado<br/>números por período"]
+    D --> V["Vagas<br/>salvar ou descartar"]
+    V --> J["Página da vaga<br/>aderência, currículo adaptado,<br/>preparação para entrevista"]
+    J --> C["Candidatura<br/>com o currículo enviado congelado"]
+    G["Emails do processo<br/>rótulo do Gmail"] --> S["Claude sugere<br/>o novo status"]
+    S -->|"você confirma"| C
+    C --> H["Hoje e Métricas<br/>follow-ups e funil"]
+```
+
+Cada caixa é uma tela ou uma etapa. O Claude só entra onde há uma seta para
+ele, e nenhuma sugestão vira dado sem o seu clique.
 
 ## O que ele faz
 
@@ -43,6 +78,43 @@ sugere o novo status. Você confirma com um clique.
 
 Sem a chave, tudo da primeira metade funciona. Com ela, o Claude entra só onde
 você pede, e o que ele propõe passa pelo seu clique antes de virar dado.
+
+### Telas
+
+<details open>
+<summary><b>Busca de vagas</b>: cards de todas as fontes, com contador e ordenação</summary>
+
+<br/>
+
+![Busca de vagas com cards de várias fontes](docs/images/vagas.png)
+
+Clique no nome da empresa num card para ver só as vagas dela. As abas *Buscar* e
+*Minhas vagas* ficam fixas no topo ao rolar.
+
+</details>
+
+<details>
+<summary><b>Filtros</b>: termos de busca e empresas acompanhadas</summary>
+
+<br/>
+
+![Modal de filtros com termos de busca e empresas acompanhadas](docs/images/filtros.png)
+
+A plataforma de cada empresa é reconhecida pelo endereço colado, na hora.
+
+</details>
+
+<details>
+<summary><b>Página da vaga</b>: aderência, currículo adaptado, preparação e perguntas do formulário</summary>
+
+<br/>
+
+![Painéis de IA na página da vaga](docs/images/vaga.png)
+
+Cada painel só chama o Claude no clique. Vai a parte profissional do
+currículo, sem nome nem contatos.
+
+</details>
 
 ## Requisitos
 
@@ -271,6 +343,32 @@ escolhe a candidatura por número, numa lista que o servidor montou, e o
 servidor confere se a empresa aparece de fato no email. Proposta sem esse
 apoio vem desmarcada.
 
+<details>
+<summary>Como um email vira status, passo a passo</summary>
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant G as Gmail (rótulo job-tracker)
+    participant API as API local
+    participant C as Claude
+    participant T as Você, na tela
+    API->>G: lê só o rótulo, por IMAP
+    API->>API: confere SPF, DKIM e DMARC do remetente
+    alt remetente confirmado
+        API->>API: vincula à candidatura da empresa
+        API->>C: corpo do email, delimitado como dado
+        C-->>API: sugestão estruturada, validada com Zod
+        API-->>T: card com a sugestão e o motivo
+        T->>API: confirma (ou ignora)
+        API->>API: grava o status e o evento no histórico
+    else remetente não confirmado
+        API-->>T: email fica para vínculo manual
+    end
+```
+
+</details>
+
 **O "De" de um email não prova nada.** Qualquer um escreve
 `no-reply@gupy.com.br` no remetente. O app lê o resultado que o servidor de
 email grava em cada mensagem (SPF, DKIM e DMARC) e só vincula sozinho, e só
@@ -289,6 +387,23 @@ aparecem em lugar nenhum e expressões com cara de texto de IA.
 **Formulário nunca é enviado automaticamente.** Candidatura enviada não tem
 desfazer. O contrato da API afirma isso: o campo `submitted` é `false`
 literal, não booleano. Não existe forma de expressar um envio.
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> rascunho
+    rascunho --> aplicado
+    aplicado --> triagem
+    triagem --> entrevista
+    entrevista --> teste
+    teste --> oferta
+    aplicado --> rejeitado
+    triagem --> rejeitado
+    entrevista --> rejeitado
+    teste --> rejeitado
+    oferta --> [*]
+    rejeitado --> [*]
+```
 
 **O funil conta quem já chegou, não quem está.** Uma candidatura que passou
 por entrevista, teste e oferta tem status atual `oferta`; contar o status
@@ -321,6 +436,19 @@ recruiter-frontend/   Next.js: telas; fala com a API só pelo servidor do Next
 recruiter-backend/    Nest: API, banco, email, navegador, Claude
 packages/shared/      Schemas Zod usados pelos dois lados
 docker-compose.yml    Postgres local
+```
+
+```mermaid
+flowchart LR
+    B["Navegador"] -->|"127.0.0.1:3000"| N["Next.js<br/>telas e server actions"]
+    N -->|"127.0.0.1:3333<br/>JSON"| A["Nest.js<br/>API"]
+    A --> DB[("PostgreSQL<br/>Docker, 127.0.0.1")]
+    A --> IMAP["Gmail<br/>IMAP"]
+    A --> CL["Claude<br/>API da Anthropic"]
+    A --> PT["Portais e<br/>plataformas de vagas"]
+    A --> PW["Navegador do sistema<br/>Playwright, nunca envia"]
+    S["packages/shared<br/>schemas Zod"] -.-> N
+    S -.-> A
 ```
 
 Só a API fala com o banco. Todo contrato que cruza os dois apps vive em
@@ -368,6 +496,9 @@ npm run db:studio                  # navega pelo banco
 
 ## Problemas comuns
 
+<details>
+<summary>Abrir a lista</summary>
+
 **A porta 5432 já está em uso.** Outro Postgres está rodando na máquina. Mude
 `POSTGRES_PORT` no `.env` da raiz e a porta do `DATABASE_URL` em
 `recruiter-backend/.env`.
@@ -404,3 +535,5 @@ em *Filtros*.
 
 **"O PDF quase não tem texto".** O currículo é uma imagem escaneada, sem
 texto selecionável. Exporte de novo pelo editor (Word, Google Docs, Canva).
+
+</details>
