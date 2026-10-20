@@ -35,6 +35,13 @@ const CONCURRENCY = 3;
 const DELAY_MS = 300;
 
 /**
+ * Quanto vale uma vaga já lida. A página de uma vaga não muda depois de
+ * publicada; sem esta memória, cada rodada reabria as mesmas trinta páginas
+ * — 30 segundos medidos — para achar duas ou três novas.
+ */
+const READ_TTL_MS = 12 * 60 * 60 * 1000;
+
+/**
  * Títulos de desenvolvimento. Só decide o que vale abrir — a vaga ainda passa
  * pelos filtros do perfil depois. Termos do perfil entram junto, para quem
  * procura outra coisa ("dados", "QA") não ficar sem nada.
@@ -54,6 +61,12 @@ export class GeekHunterSource implements DiscoverySource {
   readonly deadlineMs = 45_000;
 
   private readonly logger = new Logger(GeekHunterSource.name);
+
+  /** Vaga já aberta, por endereço. `null` guarda "sem marcação": não reabrir. */
+  private readonly read = new Map<
+    string,
+    { at: number; job: JobSearchResult | null }
+  >();
 
   async fetch(query: DiscoveryQuery): Promise<JobSearchResult[]> {
     const terms = searchTermsFor(query).map(fold);
@@ -87,28 +100,40 @@ export class GeekHunterSource implements DiscoverySource {
       ).values(),
     ].slice(0, MAX_JOBS);
 
-    const found: JobSearchResult[] = [];
+    const now = Date.now();
 
-    for (let start = 0; start < wanted.length; start += CONCURRENCY) {
+    for (const [url, entry] of this.read) {
+      if (now - entry.at > READ_TTL_MS) {
+        this.read.delete(url);
+      }
+    }
+
+    const fresh = wanted.filter((job) => !this.read.has(job.url));
+
+    for (let start = 0; start < fresh.length; start += CONCURRENCY) {
+      const batch = fresh.slice(start, start + CONCURRENCY);
       const pages = await Promise.allSettled(
-        wanted
-          .slice(start, start + CONCURRENCY)
-          .map((job) => this.readJob(job.url)),
+        batch.map((job) => this.readJob(job.url)),
       );
 
-      for (const page of pages) {
-        if (page.status === 'fulfilled' && page.value) {
-          found.push(page.value);
+      // Falha de rede não é guardada: a vaga é tentada de novo na próxima.
+      pages.forEach((page, index) => {
+        if (page.status === 'fulfilled') {
+          this.read.set(batch[index].url, { at: now, job: page.value });
         }
-      }
+      });
 
-      if (start + CONCURRENCY < wanted.length) {
+      if (start + CONCURRENCY < fresh.length) {
         await sleep(DELAY_MS);
       }
     }
 
+    const found = wanted
+      .map((job) => this.read.get(job.url)?.job)
+      .filter((job): job is JobSearchResult => Boolean(job));
+
     this.logger.log(
-      `geekhunter: ${listed.length} na listagem, ${wanted.length} abertas, ${found.length} lidas`,
+      `geekhunter: ${listed.length} na listagem, ${wanted.length} de dev, ${fresh.length} abertas agora, ${found.length} vagas`,
     );
 
     return found;

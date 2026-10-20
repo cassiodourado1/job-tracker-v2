@@ -1,4 +1,11 @@
-import { isWanted, readGeekHunterList } from './geekhunter';
+import { fetchPublicPage } from '../../safe-fetch';
+import { GeekHunterSource, isWanted, readGeekHunterList } from './geekhunter';
+
+jest.mock('../../safe-fetch', () => ({ fetchPublicPage: jest.fn() }));
+
+const fetchPage = fetchPublicPage as jest.MockedFunction<
+  typeof fetchPublicPage
+>;
 
 /** Listagem SINTÉTICA, com a estrutura real do ItemList da página. */
 function listing(items: { url: string; name: string }[]): string {
@@ -54,5 +61,53 @@ describe('isWanted', () => {
     expect(isWanted('Analista de Suporte', [])).toBe(false);
     expect(isWanted('Engenheiro de Dados', [])).toBe(false);
     expect(isWanted('Engenheiro de Dados', ['engenheiro de dados'])).toBe(true);
+  });
+});
+
+describe('GeekHunterSource', () => {
+  const VAGA =
+    'https://www.geekhunter.com/pt/empresa-exemplo/jobs/desenvolvedor-react-1';
+
+  /** Página de vaga SINTÉTICA, com o JobPosting que o portal publica. */
+  const paginaVaga = `<script type="application/ld+json">${JSON.stringify({
+    '@type': 'JobPosting',
+    title: 'Desenvolvedor React',
+    datePosted: '2026-10-19',
+    jobLocationType: 'TELECOMMUTE',
+    hiringOrganization: { name: 'Empresa Exemplo' },
+  })}</script>`;
+
+  beforeEach(() => {
+    fetchPage.mockReset();
+    fetchPage.mockImplementation((url: string) =>
+      Promise.resolve({
+        finalUrl: url,
+        html: url.includes('/jobs/')
+          ? paginaVaga
+          : url.endsWith('/pt/vagas')
+            ? listing([{ url: VAGA, name: 'Desenvolvedor React' }])
+            : '<html></html>',
+      }),
+    );
+  });
+
+  it('não reabre na rodada seguinte a vaga que já leu', async () => {
+    const source = new GeekHunterSource();
+
+    const first = await source.fetch({ terms: [] });
+    const second = await source.fetch({ terms: [] });
+
+    const opened = fetchPage.mock.calls.filter(([url]) =>
+      url.includes('/jobs/'),
+    );
+
+    expect(first).toHaveLength(1);
+    expect(first[0]).toMatchObject({
+      company: 'Empresa Exemplo',
+      workModel: 'remoto',
+      source: 'geekhunter',
+    });
+    expect(second).toEqual(first);
+    expect(opened).toHaveLength(1);
   });
 });
