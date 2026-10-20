@@ -17,6 +17,7 @@ import {
   formatSalary,
 } from "@/features/jobs/components/job-meta";
 import type { SavedJob } from "@/features/jobs/types";
+import { openableJobUrl } from "@recruit/shared";
 import { safeExternalUrl } from "@/lib/safe-url";
 
 interface SavedJobsListProps {
@@ -76,7 +77,7 @@ function SavedCard({
   const [confirming, setConfirming] = useState(false);
   const [pending, startTransition] = useTransition();
   const salary = formatSalary(job);
-  const portalUrl = safeExternalUrl(job.url);
+  const portalUrl = safeExternalUrl(job.url && openableJobUrl(job.url, job.title));
 
   const run = (action: () => Promise<{ status: string; message?: string }>) => {
     setError(null);

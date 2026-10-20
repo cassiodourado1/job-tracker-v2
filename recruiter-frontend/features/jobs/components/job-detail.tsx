@@ -7,12 +7,13 @@ import {
   formatSalary,
 } from "@/features/jobs/components/job-meta";
 import type { Job } from "@/features/jobs/types";
+import { openableJobUrl } from "@recruit/shared";
 import { safeExternalUrl } from "@/lib/safe-url";
 
 /** Server Component: é só leitura, nada aqui precisa de JS no cliente. */
 export function JobDetail({ job }: { job: Job }) {
   const salary = formatSalary(job);
-  const portalUrl = safeExternalUrl(job.url);
+  const portalUrl = safeExternalUrl(job.url && openableJobUrl(job.url, job.title));
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">

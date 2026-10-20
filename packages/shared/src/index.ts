@@ -7,6 +7,7 @@ export * from './job-fit';
 export * from './tailored-resume';
 export * from './interview-prep';
 export * from './jobs-dashboard';
+export * from './job-link';
 export * from './form-fill';
 export * from './form-answer';
 export * from './job-preferences';

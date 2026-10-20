@@ -16,6 +16,7 @@ import {
   formatSalary,
 } from "@/features/jobs/components/job-meta";
 import type { JobSearchResult, JobVariant } from "@/features/jobs/types";
+import { openableJobUrl } from "@recruit/shared";
 import { safeExternalUrl } from "@/lib/safe-url";
 
 /**
@@ -103,7 +104,7 @@ export function ResultCard({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const salary = formatSalary(result);
-  const portalUrl = safeExternalUrl(result.url);
+  const portalUrl = safeExternalUrl(openableJobUrl(result.url, result.title));
 
   const save = () => {
     setError(null);
@@ -241,7 +242,7 @@ export function ResultCard({
             </span>
           )}
 
-          {others.length > 0 && <OtherPostings others={others} />}
+          {others.length > 0 && <OtherPostings others={others} title={result.title} />}
 
           {error && (
             <p role="alert" className="text-sm text-red-600 dark:text-red-400">
@@ -344,7 +345,14 @@ export function ResultCard({
  * Os outros anúncios da mesma vaga, fechados por padrão: o card continua do
  * tamanho dos outros, e quem quer se candidatar a mais de um abre a lista.
  */
-function OtherPostings({ others }: { others: JobVariant[] }) {
+/** `title`: anúncio igual é da mesma vaga, então o nome do link é o mesmo. */
+function OtherPostings({
+  others,
+  title,
+}: {
+  others: JobVariant[];
+  title: string;
+}) {
   return (
     <details className="group text-sm">
       <summary className="cursor-pointer list-none text-zinc-500 underline-offset-4 transition hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100">
@@ -352,7 +360,7 @@ function OtherPostings({ others }: { others: JobVariant[] }) {
       </summary>
       <ul className="mt-2 flex flex-col gap-1.5">
         {others.map((other) => {
-          const url = safeExternalUrl(other.url);
+          const url = safeExternalUrl(openableJobUrl(other.url, title));
           const details = [
             other.location,
             other.workModel ? WORK_MODEL_LABELS[other.workModel] : null,
