@@ -505,8 +505,9 @@ const WORK_MODEL_TEXT = {
 };
 
 /**
- * O recorte que veio do painel, dito por extenso, com o "limpar". Sem isto a
- * lista mostraria 9 vagas sem explicar por que só 9.
+ * O recorte que veio de um clique (no painel ou no nome da empresa de um
+ * card), dito por extenso, com o "limpar". Sem isto a lista mostraria 9
+ * vagas sem explicar por que só 9.
  */
 function DrillNotice({ drill }: { drill: JobDrilldown }) {
   const parts = [
@@ -521,7 +522,7 @@ function DrillNotice({ drill }: { drill: JobDrilldown }) {
 
   return (
     <span className="flex items-baseline gap-1.5 rounded-full border border-sky-800 bg-sky-950 px-2.5 py-0.5 text-xs text-sky-200">
-      Do painel: {parts.join(" · ")}
+      Filtrado por: {parts.join(" · ")}
       <span aria-hidden="true">·</span>
       <Link
         href="/vagas"
