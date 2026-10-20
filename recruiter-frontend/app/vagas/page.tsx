@@ -33,8 +33,13 @@ export default async function BuscarVagasPage({
     listSavedJobs(selected.id),
   ]);
 
+  const drill = drillFrom(params);
+
   return (
     <JobDiscovery
+      // Trocar de recorte (clicar noutra empresa estando em /vagas) é outra
+      // busca: a chave remonta o componente em vez de misturar as listas.
+      key={JSON.stringify(drill)}
       profileId={selected.id}
       query={params.q ?? ""}
       preferences={profile.preferences}
@@ -42,7 +47,7 @@ export default async function BuscarVagasPage({
         .map((item) => item.job.url)
         .filter((url) => url !== null)}
       savedCount={saved.length}
-      drill={drillFrom(params)}
+      drill={drill}
     />
   );
 }

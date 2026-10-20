@@ -206,9 +206,15 @@ export function ResultCard({
         <div className="cine-glass flex h-full flex-col gap-3 rounded-2xl p-5">
           <div className="flex items-start justify-between gap-2">
             <div className="flex min-w-0 flex-col gap-1">
-              <span className="truncate font-[family-name:var(--font-display)] text-base font-semibold" title={result.company}>
+              {/* Leva às vagas só desta empresa, com o mesmo recorte que o
+                  painel usa — nada é gravado nos filtros. */}
+              <Link
+                href={`/vagas?${new URLSearchParams({ empresa: result.company }).toString()}`}
+                className="truncate font-[family-name:var(--font-display)] text-base font-semibold underline-offset-4 transition hover:text-accent hover:underline"
+                title={`Ver as vagas de ${result.company}`}
+              >
                 {result.company}
-              </span>
+              </Link>
               {/* Duas linhas no máximo: sem isto cada card da grade tem uma altura
                   diferente, porque os títulos variam de 3 a 12 palavras. */}
               <span
