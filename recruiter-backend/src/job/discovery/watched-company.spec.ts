@@ -10,6 +10,16 @@ describe('watchedCompanyFromUrl', () => {
     ['https://jobs.lever.co/acme', 'lever', 'acme'],
     ['https://jobs.ashbyhq.com/acme/abc', 'ashby', 'acme'],
     ['https://ciandt.com/br/pt-br/carreiras', 'lever', 'ciandt'],
+    [
+      'https://acme.wd103.myworkdayjobs.com/AcmeCareers',
+      'workday',
+      'acme.wd103/AcmeCareers',
+    ],
+    [
+      'https://acme.wd5.myworkdayjobs.com/pt-BR/AcmeCareers/job/Sao-Paulo/Dev_R1',
+      'workday',
+      'acme.wd5/AcmeCareers',
+    ],
   ])('%s → %s', (url, platform, slug) => {
     expect(watchedCompanyFromUrl(url)).toEqual({ platform, slug });
   });
@@ -24,6 +34,8 @@ describe('watchedCompanyFromUrl', () => {
     ['https://www.squadra.com.br/vagas/'],
     ['não é endereço'],
     ['javascript:alert(1)'],
+    // Workday sem o site não diz quais vagas ler.
+    ['https://acme.wd103.myworkdayjobs.com/'],
   ])('não reconhece %s', (url) => {
     expect(watchedCompanyFromUrl(url)).toBeNull();
   });

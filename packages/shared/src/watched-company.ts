@@ -17,13 +17,18 @@ export const WATCHED_PLATFORMS = [
   'greenhouse',
   'lever',
   'ashby',
+  'workday',
 ] as const;
 
 export type WatchedPlatform = (typeof WATCHED_PLATFORMS)[number];
 
 export interface WatchedCompany {
   platform: WatchedPlatform;
-  /** Identificador da empresa na plataforma: o subdomínio ou o caminho. */
+  /**
+   * Identificador da empresa na plataforma: o subdomínio ou o caminho. Na
+   * Workday são três partes, `<empresa>.<servidor>/<site>`
+   * ("accenture.wd103/AccentureCareers"): a API precisa das três.
+   */
   slug: string;
 }
 
@@ -34,6 +39,7 @@ export const WATCHED_PLATFORM_LABELS: Record<WatchedPlatform, string> = {
   greenhouse: 'Greenhouse',
   lever: 'Lever',
   ashby: 'Ashby',
+  workday: 'Workday',
 };
 
 /** Subdomínios da própria plataforma, que não são empresa nenhuma. */
@@ -104,6 +110,22 @@ export function watchedCompanyFromUrl(raw: string): WatchedCompany | null {
 
   const ashby = pathOf('jobs.ashbyhq.com');
   if (ashby) return { platform: 'ashby', slug: ashby };
+
+  // Workday: `<empresa>.wd<N>.myworkdayjobs.com/[idioma/]<Site>`. O site
+  // diferencia maiúsculas ("AccentureCareers") e vem logo depois do idioma,
+  // quando há; a mesma empresa pode ter vários (Accenture e Avanade).
+  const workday = /^([a-z0-9-]+)\.(wd\d+)\.myworkdayjobs\.com$/.exec(host);
+
+  if (workday) {
+    const segments = url.pathname.split('/').filter(Boolean);
+    const site = /^[a-z]{2}-[A-Z]{2}$/.test(segments[0] ?? '')
+      ? segments[1]
+      : segments[0];
+
+    return site && /^[A-Za-z0-9_-]{1,80}$/.test(site)
+      ? { platform: 'workday', slug: `${workday[1]}.${workday[2]}/${site}` }
+      : null;
+  }
 
   // O site da CI&T só mostra as vagas que ela publica na Lever: medido em
   // outubro de 2026, 198 vagas em `jobs.lever.co/ciandt`. Quem cola o
