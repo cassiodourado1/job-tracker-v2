@@ -79,13 +79,19 @@ export function matches(
     return false;
   }
 
-  // Tecnologias marcadas cortam por "ou": basta a vaga citar uma delas.
-  // Antes só reordenavam, e marcar Drupal deixava a lista cheia de .NET.
-  if (
-    preferences.stacks.length > 0 &&
-    !job.stack.some((stack) => preferences.stacks.includes(stack as StackLabel))
-  ) {
-    return false;
+  // Tecnologias marcadas cortam: por "ou" (cita uma), ou por "e" (cita
+  // todas), conforme `stackMatch`. Antes só reordenavam, e marcar Drupal
+  // deixava a lista cheia de .NET.
+  if (preferences.stacks.length > 0) {
+    const cited = (label: StackLabel) => job.stack.includes(label);
+    const ok =
+      preferences.stackMatch === 'all'
+        ? preferences.stacks.every(cited)
+        : preferences.stacks.some(cited);
+
+    if (!ok) {
+      return false;
+    }
   }
 
   if (

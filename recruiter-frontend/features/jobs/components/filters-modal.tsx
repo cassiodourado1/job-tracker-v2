@@ -273,7 +273,7 @@ export function FiltersModal({
 
           <Group
             title="Tecnologias"
-            hint="Mostra só as vagas que citam pelo menos uma das marcadas: Drupal e WordPress traz quem pede uma ou outra. Vaga sem descrição só revela a tecnologia pelo título."
+            hint="Mostra só as vagas que citam as marcadas. Vaga sem descrição só revela a tecnologia pelo título."
           >
             <AllChip
               label="todas"
@@ -290,6 +290,23 @@ export function FiltersModal({
                 }
               />
             ))}
+            {/* Só faz diferença com duas ou mais: com uma, "qualquer" e
+                "todas" dão a mesma lista. */}
+            {draft.stacks.length > 1 && (
+              <div className="mt-1 flex w-full flex-wrap items-center gap-2 text-xs text-zinc-600 dark:text-zinc-300">
+                <span>A vaga precisa citar:</span>
+                <Chip
+                  label="qualquer uma"
+                  active={draft.stackMatch === "any"}
+                  onClick={() => patch({ stackMatch: "any" })}
+                />
+                <Chip
+                  label="todas"
+                  active={draft.stackMatch === "all"}
+                  onClick={() => patch({ stackMatch: "all" })}
+                />
+              </div>
+            )}
           </Group>
         </div>
 

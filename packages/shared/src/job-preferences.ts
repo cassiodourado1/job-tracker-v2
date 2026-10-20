@@ -183,6 +183,12 @@ export const jobPreferencesSchema = z.object({
    * Vazio = qualquer tecnologia. Também pesa na ordem por relevância.
    */
   stacks: z.array(stackLabelSchema).max(STACK_LABELS.length),
+  /**
+   * Como as tecnologias marcadas combinam: `any` = a vaga cita uma delas
+   * ("ou"); `all` = cita todas ("e"). Padrão "ou": "e" com três marcadas
+   * quase sempre zera a lista. Com padrão, para preferências gravadas antes.
+   */
+  stackMatch: z.enum(['any', 'all']).default('any'),
   /** Título precisa conter uma destas. Vazio = qualquer título. */
   titleIncludes: z.array(keyword).max(30),
   /** Título com qualquer uma destas é descartado. Vence o `titleIncludes`. */
@@ -248,6 +254,7 @@ export const defaultJobPreferences: JobPreferences = {
   contractTypes: [],
   seniorities: [],
   stacks: [],
+  stackMatch: 'any',
   titleIncludes: [
     'engineer',
     'engenhei',
