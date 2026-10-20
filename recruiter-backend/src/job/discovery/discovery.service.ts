@@ -14,6 +14,7 @@ import {
 import { AshbySource } from './sources/ashby';
 import { BrazilPortalsSource } from './sources/br-portals';
 import { GreenhouseSource } from './sources/greenhouse';
+import { GeekHunterSource } from './sources/geekhunter';
 import { GupySource } from './sources/gupy';
 import { LeverSource } from './sources/lever';
 import { ProgramathorSource } from './sources/programathor';
@@ -91,6 +92,7 @@ export class DiscoveryService {
       new BrazilPortalsSource(),
       new ProgramathorSource(),
       new NerdinSource(),
+      new GeekHunterSource(),
       // Por último: a ordem do array é prioridade de deduplicação, e o alerta
       // é o registro mais pobre de qualquer vaga que ele compartilhe — não
       // traz descrição. Se a mesma vaga vier do Greenhouse, a versão rica vence.
