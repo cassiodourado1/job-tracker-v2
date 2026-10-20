@@ -12,13 +12,15 @@ import { jobDrilldownSchema } from './jobs-dashboard';
  *
  * A divisão importa, e ela decide o comportamento de cada campo:
  *
- *   CORTAM     escopo, modalidade, contrato e senioridade. São critérios de
- *              aceitação: se você não aceita presencial, vaga presencial é
- *              ruído, não opção.
- *   PRIORIZA   stack. Marcar Go empurra vaga de Go para o topo sem esconder a
- *              de Kotlin. Cortar por stack seria pior do que parece — metade
- *              das fontes não traz descrição, a stack detectada vem vazia, e a
- *              vaga sumiria por falta de texto, não por não combinar.
+ *   CORTAM     escopo, modalidade, contrato, senioridade e stack. São critérios
+ *              de aceitação: se você não aceita presencial, vaga presencial é
+ *              ruído, não opção. Stack corta por "ou" — basta citar uma das
+ *              marcadas.
+ *
+ * Stack já foi só prioridade, pelo receio de cortar vaga sem descrição (a
+ * stack detectada vem vazia). Na prática, marcar Drupal e receber a lista
+ * cheia de .NET pareceu defeito: quem marca uma tecnologia quer ver só ela. O
+ * risco fica dito na tela.
  *
  * Array vazio (ou `scope` nulo) significa "tanto faz", nunca "nenhum". É a
  * diferença entre um filtro recém-criado e um filtro que zera a lista sem
@@ -175,7 +177,11 @@ export const jobPreferencesSchema = z.object({
   workModels: z.array(workModelSchema).max(3),
   contractTypes: z.array(contractTypeSchema).max(4),
   seniorities: z.array(senioritySchema).max(5),
-  /** Prioriza na ordenação; não elimina. */
+  /**
+   * Fica só a vaga que cita pelo menos UMA destas ("ou", não "e"): quem marca
+   * Drupal e WordPress quer as duas famílias, não só a vaga que pede ambas.
+   * Vazio = qualquer tecnologia. Também pesa na ordem por relevância.
+   */
   stacks: z.array(stackLabelSchema).max(STACK_LABELS.length),
   /** Título precisa conter uma destas. Vazio = qualquer título. */
   titleIncludes: z.array(keyword).max(30),
@@ -193,13 +199,6 @@ export const jobPreferencesSchema = z.object({
    * Com padrão, para as preferências gravadas antes dele continuarem válidas.
    */
   hideUndeclaredWorkModel: z.boolean().default(false),
-  /**
-   * Com tecnologias marcadas, mostra só a vaga que cita uma delas — sem isto
-   * elas só reordenam. Desligado por padrão pelo mesmo motivo da modalidade:
-   * vaga sem descrição só tem o título para revelar a stack, e cortar por
-   * ele esconde vaga boa. Com padrão, para preferências gravadas antes.
-   */
-  requireStacks: z.boolean().default(false),
   linkedinMaxAgeDays: z
     .number()
     .int()
@@ -287,7 +286,6 @@ export const defaultJobPreferences: JobPreferences = {
   ],
   linkedinMaxAgeDays: DEFAULT_LINKEDIN_MAX_AGE_DAYS,
   hideUndeclaredWorkModel: false,
-  requireStacks: false,
   searchTerms: DEFAULT_SEARCH_TERMS,
   companyPages: [],
 };
