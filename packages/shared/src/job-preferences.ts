@@ -5,6 +5,7 @@ import {
   jobSearchResultSchema,
   workModelSchema,
 } from './job';
+import { stateFilterSchema } from './brazil-state';
 import { jobDrilldownSchema } from './jobs-dashboard';
 
 /**
@@ -326,6 +327,12 @@ export const discoverJobsSchema = z.strictObject({
    * acervo numa resposta. Opt-in porque custa segundos.
    */
   expanded: z.coerce.boolean().optional(),
+  /**
+   * Fora do `jobDrilldownSchema` de propósito: o recorte do painel decide pelo
+   * anúncio principal, e o estado vale pela vaga inteira — a mesma posição
+   * anunciada em SP e em RJ precisa aparecer nos dois.
+   */
+  state: stateFilterSchema.optional(),
   ...jobDrilldownSchema.shape,
 });
 
@@ -387,6 +394,15 @@ export const discoverResultSchema = z.object({
   failedSources: z.array(z.string()),
   /** Tempo real de rede desta rodada. 0 quando veio do cache. */
   fetchMs: z.number().int(),
+  /**
+   * Quantas vagas há em cada estado, da maior para a menor, contadas ANTES do
+   * recorte por estado: escolhido SP, o seletor continua mostrando os outros
+   * para trocar. Vaga em vários estados conta em cada um; `nao-informa` vem
+   * por último, seja qual for o tamanho.
+   */
+  byState: z.array(
+    z.object({ state: stateFilterSchema, count: z.number().int().min(0) }),
+  ),
 });
 
 export type DiscoverResult = z.infer<typeof discoverResultSchema>;
