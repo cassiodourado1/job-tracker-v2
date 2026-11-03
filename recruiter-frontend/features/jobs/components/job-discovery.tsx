@@ -339,40 +339,40 @@ export function JobDiscovery({
             </select>
           </label>
 
-          {/* As contagens chegam com o primeiro lote; antes dele não há o que
-              escolher. Trocar recomeça a lista, pelo mesmo motivo da ordem. */}
-          {(byState.length > 0 || state) && (
-            <label className="flex shrink-0 items-center gap-2 text-xs text-zinc-600 dark:text-zinc-300">
-              Estado
-              <select
-                value={state}
-                onChange={(event) => {
-                  setState(event.target.value as StateFilter | "");
-                  setItems([]);
-                  setTotal(null);
-                  setExhausted(null);
-                  cursor.current = null;
-                }}
-                className="cursor-pointer rounded-lg border border-zinc-300 bg-transparent px-2 py-2 text-sm font-medium text-zinc-900 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-900"
-              >
-                <option value="" className="text-zinc-900">
-                  Todos os estados
+          {/* Sempre visível: escondido até o primeiro lote, ninguém achava o
+              filtro. Antes da busca lista os estados sem contagem; dá para
+              escolher e só então buscar. Trocar recomeça a lista, pelo mesmo
+              motivo da ordem. */}
+          <label className="flex shrink-0 items-center gap-2 text-xs text-zinc-600 dark:text-zinc-300">
+            Estado
+            <select
+              value={state}
+              onChange={(event) => {
+                setState(event.target.value as StateFilter | "");
+                setItems([]);
+                setTotal(null);
+                setExhausted(null);
+                cursor.current = null;
+              }}
+              className="cursor-pointer rounded-lg border border-zinc-300 bg-transparent px-2 py-2 text-sm font-medium text-zinc-900 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-900"
+            >
+              <option value="" className="text-zinc-900">
+                Todos os estados
+              </option>
+              {stateOptions(byState, state).map((row) => (
+                <option
+                  key={row.state}
+                  value={row.state}
+                  className="text-zinc-900"
+                >
+                  {row.state === "nao-informa"
+                    ? "Não informa o estado"
+                    : BRAZIL_STATES[row.state]}
+                  {row.count !== null && ` (${row.count})`}
                 </option>
-                {stateOptions(byState, state).map((row) => (
-                  <option
-                    key={row.state}
-                    value={row.state}
-                    className="text-zinc-900"
-                  >
-                    {row.state === "nao-informa"
-                      ? "Não informa o estado"
-                      : BRAZIL_STATES[row.state]}{" "}
-                    ({row.count})
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
+              ))}
+            </select>
+          </label>
         </form>
 
         <Status exhausted={exhausted} failed={failed} error={error} />
@@ -493,7 +493,18 @@ function LoadingGrid({ label, count }: { label: string; count: number }) {
 function stateOptions(
   rows: DiscoverResult["byState"],
   selected: StateFilter | "",
-): DiscoverResult["byState"] {
+): { state: StateFilter; count: number | null }[] {
+  // Antes da primeira busca não há contagem: os estados em ordem alfabética,
+  // para dar para escolher um antes de buscar.
+  if (rows.length === 0) {
+    return [
+      ...(Object.keys(BRAZIL_STATES) as (keyof typeof BRAZIL_STATES)[])
+        .sort((a, b) => BRAZIL_STATES[a].localeCompare(BRAZIL_STATES[b]))
+        .map((state) => ({ state, count: null })),
+      { state: "nao-informa", count: null },
+    ];
+  }
+
   if (!selected || rows.some((row) => row.state === selected)) {
     return rows;
   }
