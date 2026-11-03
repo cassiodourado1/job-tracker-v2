@@ -17,6 +17,7 @@ import {
   type JobsDashboard,
   type JobSearchResult,
   type JobSort,
+  type StateFilter,
   type SaveJobInput,
   type SavedJob,
   type UndismissJobInput,
@@ -50,6 +51,7 @@ export class JobService {
       q?: string;
       expanded?: boolean;
       sort?: JobSort;
+      state?: StateFilter;
     } & JobDrilldown,
   ): Promise<DiscoverResult> {
     const profile = await this.prisma.profile.findUnique({
@@ -79,6 +81,7 @@ export class JobService {
       excludedUrls: await this.resolvedUrls(params.profileId),
       cursor: params.cursor,
       sort: params.sort ?? DEFAULT_JOB_SORT,
+      state: params.state,
       drill: {
         source: params.source,
         company: params.company,

@@ -1,4 +1,10 @@
-import type { ContractType, Seniority, WorkModel } from '@recruit/shared';
+import {
+  BRAZIL_STATES,
+  type BrazilState,
+  type ContractType,
+  type Seniority,
+  type WorkModel,
+} from '@recruit/shared';
 
 /**
  * Transforma o que cada portal diz no vocabulário do projeto.
@@ -126,6 +132,96 @@ export function countryFromText(text: string | null): string | null {
   }
 
   return null;
+}
+
+const STATE_BY_ACRONYM = new Map(
+  (Object.keys(BRAZIL_STATES) as BrazilState[]).map((uf) => [
+    uf.toLowerCase(),
+    uf,
+  ]),
+);
+
+const STATE_BY_NAME = new Map(
+  (Object.entries(BRAZIL_STATES) as [BrazilState, string][]).map(
+    ([uf, name]) => [fold(name), uf],
+  ),
+);
+
+/**
+ * Cidade sem estado ao lado — "GOIÂNIA, Brasil", "Greater São Paulo Area".
+ * As mesmas cidades que `COUNTRY_HINTS` já reconhece como Brasil, mais Barueri,
+ * que aparece sozinha nas fontes. As exceções no padrão são cidades
+ * homônimas: "San Salvador" é El Salvador, "Vitória da Conquista" é Bahia.
+ */
+const CITY_STATE: [RegExp, BrazilState][] = [
+  [
+    /\bsao paulo\b|\bcampinas\b|\bsorocaba\b|\bribeirao preto\b|\bsao jose dos campos\b|\bosasco\b|\bguarulhos\b|\bbarueri\b/,
+    'SP',
+  ],
+  [/\brio de janeiro\b|\bniteroi\b/, 'RJ'],
+  [/\bbelo horizonte\b|\buberlandia\b/, 'MG'],
+  [/\bporto alegre\b/, 'RS'],
+  [/(?<!san )\bsalvador\b/, 'BA'],
+  [/\bbrasilia\b/, 'DF'],
+  [/\bcuritiba\b|\blondrina\b/, 'PR'],
+  [/\brecife\b/, 'PE'],
+  [/\bfortaleza\b/, 'CE'],
+  [/\bflorianopolis\b|\bjoinville\b|\bblumenau\b/, 'SC'],
+  [/\bgoiania\b/, 'GO'],
+  [/\bmanaus\b/, 'AM'],
+  [/\bbelem\b/, 'PA'],
+  [/\bjoao pessoa\b/, 'PB'],
+  [/\bnatal\b/, 'RN'],
+  [/\bmaceio\b/, 'AL'],
+  [/\baracaju\b/, 'SE'],
+  [/\bcuiaba\b/, 'MT'],
+  [/\bcampo grande\b/, 'MS'],
+  [/\bvitoria\b(?! da conquista)/, 'ES'],
+];
+
+/**
+ * Estados de uma localização em texto livre, na ordem em que aparecem.
+ *
+ * Vários porque a mesma vaga é anunciada para várias cidades: "Belo
+ * Horizonte, MG; Curitiba, PR; Recife, PE". Vazio quando o texto não diz o
+ * estado — "Brasil", "Remoto", "Brazil, BR" — e quando a vaga é de outro país:
+ * "Boston, MA" não é Maranhão, e `countryFromText` resolve isso antes.
+ *
+ * Sigla e nome só valem como pedaço INTEIRO entre vírgulas: procurar "pa" ou
+ * "es" no meio do texto acharia estado em toda palavra.
+ */
+export function statesFromText(text: string | null): BrazilState[] {
+  const country = countryFromText(text);
+
+  if (!text || (country !== null && country !== 'Brasil')) {
+    return [];
+  }
+
+  const found = new Set<BrazilState>();
+
+  for (const segment of fold(text).split(/[;|/]/)) {
+    const before = found.size;
+
+    for (const part of segment.split(',').map((piece) => piece.trim())) {
+      const state = STATE_BY_ACRONYM.get(part) ?? STATE_BY_NAME.get(part);
+
+      if (state) {
+        found.add(state);
+      }
+    }
+
+    // A cidade só decide quando o trecho não trouxe estado: "São Paulo, RJ"
+    // seria erro do portal, e a sigla escrita vale mais que o palpite.
+    if (found.size === before) {
+      const city = CITY_STATE.find(([pattern]) => pattern.test(segment));
+
+      if (city) {
+        found.add(city[1]);
+      }
+    }
+  }
+
+  return [...found];
 }
 
 /**

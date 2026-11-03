@@ -9,6 +9,7 @@ import {
   type JobPreferences,
   type JobSearchResult,
   type JobSort,
+  type StateFilter,
   type WatchedCompany,
 } from '@recruit/shared';
 import { AshbySource } from './sources/ashby';
@@ -31,6 +32,7 @@ import type { DiscoveryQuery, DiscoverySource } from './provider';
 import { searchTermsFor } from './provider';
 import { groupSameJob, sameJobKey } from './grouping';
 import { scoreJob, sortKey } from './scoring';
+import { countByState, inState } from './states';
 
 /**
  * Junta as fontes, filtra, ordena e fatia.
@@ -111,6 +113,7 @@ export class DiscoveryService {
     cursor?: string;
     sort?: JobSort;
     drill?: JobDrilldown;
+    state?: StateFilter;
   }): Promise<DiscoverResult> {
     const { items, failed, fetchMs } = await this.collect({
       q: params.q,
@@ -119,12 +122,13 @@ export class DiscoveryService {
       companies: watchedCompanies(params.preferences.companyPages),
     });
 
-    const eligible = inDrilldown(
+    const beforeState = inDrilldown(
       items
         .filter((job) => matches(job, params.preferences))
         .filter((job) => matchesTerm(job, params.q)),
       params.drill ?? {},
     );
+    const eligible = inState(beforeState, params.state);
 
     const ranked = eligible
       .map((job) => ({
@@ -162,6 +166,7 @@ export class DiscoveryService {
         page.length > 0 ? null : eligible.length > 0 ? 'nada-novo' : 'fim',
       failedSources: failed,
       fetchMs,
+      byState: countByState(beforeState),
     };
   }
 
