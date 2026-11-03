@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { careerHistorySchema, emptyCareerHistory } from './career-history';
 import { defaultJobPreferences, jobPreferencesSchema } from './job-preferences';
 import { profileLinksSchema, resumeSchema } from './resume';
 
@@ -36,6 +37,7 @@ export const profileDetailSchema = profileSchema.extend({
   // Com padrão: um backend sem a coluna ainda não derruba a tela de currículo
   // por causa de um campo ausente.
   preferences: jobPreferencesSchema.default(defaultJobPreferences),
+  history: careerHistorySchema.default(emptyCareerHistory),
   updatedAt: z.iso.datetime(),
 });
 
@@ -51,6 +53,7 @@ export const updateProfileSchema = z.strictObject({
   links: profileLinksSchema.optional(),
   resume: resumeSchema.optional(),
   preferences: jobPreferencesSchema.optional(),
+  history: careerHistorySchema.optional(),
 });
 
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;

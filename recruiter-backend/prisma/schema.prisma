@@ -77,6 +77,9 @@ model Profile {
   /// e stacks preferidas. Validado com Zod na borda, como `links` e `resume`.
   /// Não vem em export nenhum — imune ao import do LinkedIn.
   jobPreferences Json?
+  /// Histórico profissional ({ notes, exclude }): a trajetória inteira, de onde
+  /// o currículo é um recorte. Validado com Zod na borda, como os outros Json.
+  careerHistory  Json?
   isDefault      Boolean  @default(false)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
