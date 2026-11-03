@@ -33,15 +33,16 @@ function statesByJob(jobs: JobSearchResult[]): Map<string, Set<BrazilState>> {
 }
 
 /**
- * Sem estado não passa por SP: foi a escolha, porque "passa quem não informa"
- * deixaria mais da metade da lista em qualquer estado. Quem quer ver essas
- * escolhe `nao-informa`.
+ * Fica a vaga de qualquer um dos estados marcados ("ou"); nenhum marcado não
+ * corta nada. Sem estado não passa por SP: foi a escolha, porque "passa quem
+ * não informa" deixaria mais da metade da lista em qualquer estado. Quem quer
+ * ver essas marca `nao-informa`.
  */
 export function inState(
   jobs: JobSearchResult[],
-  state: StateFilter | undefined,
+  wanted: StateFilter[],
 ): JobSearchResult[] {
-  if (!state) {
+  if (wanted.length === 0) {
     return jobs;
   }
 
@@ -50,7 +51,9 @@ export function inState(
   return jobs.filter((job) => {
     const states = byJob.get(sameJobKey(job))!;
 
-    return state === 'nao-informa' ? states.size === 0 : states.has(state);
+    return wanted.some((state) =>
+      state === 'nao-informa' ? states.size === 0 : states.has(state),
+    );
   });
 }
 

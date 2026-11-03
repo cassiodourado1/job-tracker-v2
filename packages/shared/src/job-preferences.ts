@@ -175,6 +175,19 @@ export const DEFAULT_SEARCH_TERMS = [
 export const jobPreferencesSchema = z.object({
   /** `null` = tanto faz. */
   scope: locationScopeSchema.nullable(),
+  /**
+   * Fica só a vaga de um destes estados ("ou"). Vazio = qualquer lugar.
+   *
+   * Diferente da modalidade, vaga que não diz o estado NÃO passa quando há
+   * estado marcado: mais da metade das vagas só diz "Brasil", e deixá-las
+   * passar faria SP mostrar quase a lista inteira. Quem quer vê-las marca
+   * `nao-informa`. Com padrão, para as preferências gravadas antes deste
+   * campo continuarem válidas.
+   */
+  states: z
+    .array(stateFilterSchema)
+    .max(stateFilterSchema.options.length)
+    .default([]),
   workModels: z.array(workModelSchema).max(3),
   contractTypes: z.array(contractTypeSchema).max(4),
   seniorities: z.array(senioritySchema).max(5),
@@ -287,6 +300,7 @@ export const defaultJobPreferences: JobPreferences = {
   ],
   linkedinMaxAgeDays: DEFAULT_LINKEDIN_MAX_AGE_DAYS,
   hideUndeclaredWorkModel: false,
+  states: [],
   searchTerms: DEFAULT_SEARCH_TERMS,
   companyPages: [],
 };
@@ -327,12 +341,6 @@ export const discoverJobsSchema = z.strictObject({
    * acervo numa resposta. Opt-in porque custa segundos.
    */
   expanded: z.coerce.boolean().optional(),
-  /**
-   * Fora do `jobDrilldownSchema` de propósito: o recorte do painel decide pelo
-   * anúncio principal, e o estado vale pela vaga inteira — a mesma posição
-   * anunciada em SP e em RJ precisa aparecer nos dois.
-   */
-  state: stateFilterSchema.optional(),
   ...jobDrilldownSchema.shape,
 });
 
@@ -396,8 +404,8 @@ export const discoverResultSchema = z.object({
   fetchMs: z.number().int(),
   /**
    * Quantas vagas há em cada estado, da maior para a menor, contadas ANTES do
-   * recorte por estado: escolhido SP, o seletor continua mostrando os outros
-   * para trocar. Vaga em vários estados conta em cada um; `nao-informa` vem
+   * corte por estado: marcado SP, o modal de filtros continua mostrando os
+   * outros com o número de cada um. Vaga em vários estados conta em cada um; `nao-informa` vem
    * por último, seja qual for o tamanho.
    */
   byState: z.array(

@@ -16,6 +16,7 @@ import { matches } from './filters';
 function preferences(over: Partial<JobPreferences> = {}): JobPreferences {
   return {
     scope: null,
+    states: [],
     workModels: [],
     contractTypes: [],
     seniorities: [],

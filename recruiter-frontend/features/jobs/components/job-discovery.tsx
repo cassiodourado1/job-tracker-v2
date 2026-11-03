@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
-  BRAZIL_STATES,
   DEFAULT_JOB_SORT,
   JOB_SORTS,
   type DiscoverResult,
@@ -11,7 +10,6 @@ import {
   type JobDrilldown,
   type JobPreferences,
   type JobSort,
-  type StateFilter,
 } from "@recruit/shared";
 import { discoverAction } from "@/features/jobs/actions";
 import { ExtractCard } from "@/features/jobs/components/extract-card";
@@ -72,9 +70,8 @@ export function JobDiscovery({
 
   const [expanded, setExpanded] = useState(false);
   const [sort, setSort] = useState<JobSort>(DEFAULT_JOB_SORT);
-  // Como a ordem, não é gravado no perfil: é "me mostre essas agora", e um
-  // estado esquecido marcado esconderia vaga na próxima visita.
-  const [state, setState] = useState<StateFilter | "">("");
+  // Contagem por estado da última busca, para o modal de filtros mostrar
+  // quantas vagas há em cada um.
   const [byState, setByState] = useState<DiscoverResult["byState"]>([]);
   const [filters, setFilters] = useState(preferences);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -160,7 +157,6 @@ export function JobDiscovery({
         expanded,
         sort,
         drill,
-        state: state || undefined,
       });
 
       if (!alive()) {
@@ -199,7 +195,7 @@ export function JobDiscovery({
     return () => {
       cancelled = true;
     };
-  }, [demand, running, exhausted, profileId, query, expanded, sort, state, stop, drill]);
+  }, [demand, running, exhausted, profileId, query, expanded, sort, stop, drill]);
 
   // Pede o próximo lote quando o fim da lista aparece na tela.
   useEffect(() => {
@@ -339,40 +335,6 @@ export function JobDiscovery({
             </select>
           </label>
 
-          {/* Sempre visível: escondido até o primeiro lote, ninguém achava o
-              filtro. Antes da busca lista os estados sem contagem; dá para
-              escolher e só então buscar. Trocar recomeça a lista, pelo mesmo
-              motivo da ordem. */}
-          <label className="flex shrink-0 items-center gap-2 text-xs text-zinc-600 dark:text-zinc-300">
-            Estado
-            <select
-              value={state}
-              onChange={(event) => {
-                setState(event.target.value as StateFilter | "");
-                setItems([]);
-                setTotal(null);
-                setExhausted(null);
-                cursor.current = null;
-              }}
-              className="cursor-pointer rounded-lg border border-zinc-300 bg-transparent px-2 py-2 text-sm font-medium text-zinc-900 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-900"
-            >
-              <option value="" className="text-zinc-900">
-                Todos os estados
-              </option>
-              {stateOptions(byState, state).map((row) => (
-                <option
-                  key={row.state}
-                  value={row.state}
-                  className="text-zinc-900"
-                >
-                  {row.state === "nao-informa"
-                    ? "Não informa o estado"
-                    : BRAZIL_STATES[row.state]}
-                  {row.count !== null && ` (${row.count})`}
-                </option>
-              ))}
-            </select>
-          </label>
         </form>
 
         <Status exhausted={exhausted} failed={failed} error={error} />
@@ -427,6 +389,7 @@ export function JobDiscovery({
         open={filtersOpen}
         preferences={filters}
         pending={savingFilters}
+        stateCounts={byState}
         onCancel={() => setFiltersOpen(false)}
         onConfirm={applyFilters}
       />
@@ -484,34 +447,6 @@ function LoadingGrid({ label, count }: { label: string; count: number }) {
  * "Na tela" só aparece enquanto há mais para carregar: igual ao total, seria
  * o mesmo número duas vezes.
  */
-/**
- * As linhas do seletor, já na ordem da API (mais vagas primeiro). O estado
- * escolhido continua na lista mesmo se zerou — trocar um filtro do perfil pode
- * tirar todas as vagas dele, e sumir com a opção marcada deixaria o seletor
- * mostrando "Todos" enquanto a lista ainda corta por ele.
- */
-function stateOptions(
-  rows: DiscoverResult["byState"],
-  selected: StateFilter | "",
-): { state: StateFilter; count: number | null }[] {
-  // Antes da primeira busca não há contagem: os estados em ordem alfabética,
-  // para dar para escolher um antes de buscar.
-  if (rows.length === 0) {
-    return [
-      ...(Object.keys(BRAZIL_STATES) as (keyof typeof BRAZIL_STATES)[])
-        .sort((a, b) => BRAZIL_STATES[a].localeCompare(BRAZIL_STATES[b]))
-        .map((state) => ({ state, count: null })),
-      { state: "nao-informa", count: null },
-    ];
-  }
-
-  if (!selected || rows.some((row) => row.state === selected)) {
-    return rows;
-  }
-
-  return [...rows, { state: selected, count: 0 }];
-}
-
 const SORT_LABELS: Record<JobSort, string> = {
   recentes: "Mais recentes",
   relevancia: "Mais relevantes",

@@ -14,7 +14,6 @@ import type {
   JobDrilldown,
   JobSearchResult,
   JobSort,
-  StateFilter,
   SavedJob,
 } from "@recruit/shared";
 import { env } from "@/lib/env";
@@ -67,7 +66,6 @@ export async function discoverJobs(params: {
   expanded?: boolean;
   sort?: JobSort;
   drill?: JobDrilldown;
-  state?: StateFilter;
 }): Promise<DiscoverResult> {
   const search = new URLSearchParams({ profileId: params.profileId });
 
@@ -77,7 +75,6 @@ export async function discoverJobs(params: {
   // Só quando ligado: z.coerce.boolean() trata "false" como verdadeiro, então
   // o parâmetro ausente é a única forma segura de dizer "não".
   if (params.expanded) search.set("expanded", "true");
-  if (params.state) search.set("state", params.state);
 
   for (const [key, value] of Object.entries(params.drill ?? {})) {
     if (value) search.set(key, value);
