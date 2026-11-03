@@ -9,7 +9,6 @@ import {
   type JobPreferences,
   type JobSearchResult,
   type JobSort,
-  type StateFilter,
   type WatchedCompany,
 } from '@recruit/shared';
 import { AshbySource } from './sources/ashby';
@@ -113,7 +112,6 @@ export class DiscoveryService {
     cursor?: string;
     sort?: JobSort;
     drill?: JobDrilldown;
-    state?: StateFilter;
   }): Promise<DiscoverResult> {
     const { items, failed, fetchMs } = await this.collect({
       q: params.q,
@@ -128,7 +126,7 @@ export class DiscoveryService {
         .filter((job) => matchesTerm(job, params.q)),
       params.drill ?? {},
     );
-    const eligible = inState(beforeState, params.state);
+    const eligible = inState(beforeState, params.preferences.states);
 
     const ranked = eligible
       .map((job) => ({
@@ -183,7 +181,10 @@ export class DiscoveryService {
     });
 
     return {
-      items: items.filter((job) => matches(job, preferences)),
+      items: inState(
+        items.filter((job) => matches(job, preferences)),
+        preferences.states,
+      ),
       failed,
     };
   }

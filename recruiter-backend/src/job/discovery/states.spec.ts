@@ -92,30 +92,43 @@ describe('inState', () => {
   ];
 
   it('sem estado escolhido não corta nada', () => {
-    expect(inState(jobs, undefined)).toHaveLength(5);
+    expect(inState(jobs, [])).toHaveLength(5);
   });
 
   it('deixa só as vagas do estado', () => {
-    expect(inState(jobs, 'SP').map((item) => item.title)).toEqual([
+    expect(inState(jobs, ['SP']).map((item) => item.title)).toEqual([
       'Dev Front-end',
     ]);
   });
 
   it('vaga sem estado some ao escolher um estado', () => {
-    expect(inState(jobs, 'PR').map((item) => item.location)).toEqual([
+    expect(inState(jobs, ['PR']).map((item) => item.location)).toEqual([
       'Curitiba, PR',
     ]);
   });
 
   it('a vaga anunciada em dois estados aparece nos dois, com os anúncios juntos', () => {
-    expect(inState(jobs, 'RJ').map((item) => item.location)).toEqual([
+    expect(inState(jobs, ['RJ']).map((item) => item.location)).toEqual([
       'Recife, PE',
       'Rio de Janeiro, RJ',
     ]);
   });
 
+  it('vários estados combinam por "ou"', () => {
+    expect(inState(jobs, ['SP', 'PR']).map((item) => item.title)).toEqual([
+      'Dev Front-end',
+      'Dev Back-end',
+    ]);
+  });
+
+  it('nao-informa junto de um estado traz os dois grupos', () => {
+    expect(
+      inState(jobs, ['SP', 'nao-informa']).map((item) => item.title),
+    ).toEqual(['Dev Front-end', 'Dev Mobile']);
+  });
+
   it('nao-informa traz só as vagas sem estado', () => {
-    expect(inState(jobs, 'nao-informa').map((item) => item.title)).toEqual([
+    expect(inState(jobs, ['nao-informa']).map((item) => item.title)).toEqual([
       'Dev Mobile',
     ]);
   });
