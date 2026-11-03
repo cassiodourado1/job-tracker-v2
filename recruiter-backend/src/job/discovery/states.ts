@@ -50,9 +50,7 @@ export function inState(
   return jobs.filter((job) => {
     const states = byJob.get(sameJobKey(job))!;
 
-    return state === 'nao-informa'
-      ? states.size === 0
-      : states.has(state);
+    return state === 'nao-informa' ? states.size === 0 : states.has(state);
   });
 }
 
