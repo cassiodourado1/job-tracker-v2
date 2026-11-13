@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
+  BRAZIL_STATES,
   CONTRACT_TYPES,
   DEFAULT_LINKEDIN_MAX_AGE_DAYS,
   LINKEDIN_AGE_OPTIONS,
@@ -14,9 +15,11 @@ import {
   SENIORITIES,
   STACK_LABELS,
   WORK_MODELS,
+  type DiscoverResult,
   type JobPreferences,
   type LocationScope,
   type StackLabel,
+  type StateFilter,
 } from "@recruit/shared";
 
 /**
@@ -34,6 +37,8 @@ interface FiltersModalProps {
   open: boolean;
   preferences: JobPreferences;
   pending: boolean;
+  /** Vagas por estado na última busca; vazio antes da primeira. */
+  stateCounts: DiscoverResult["byState"];
   onCancel: () => void;
   onConfirm: (preferences: JobPreferences) => void;
 }
@@ -42,6 +47,7 @@ export function FiltersModal({
   open,
   preferences,
   pending,
+  stateCounts,
   onCancel,
   onConfirm,
 }: FiltersModalProps) {
@@ -179,6 +185,28 @@ export function FiltersModal({
             ))}
           </Group>
 
+          <Group
+            title="Estado"
+            hint="Marque um ou mais. Com estado marcado, some a vaga que não diz onde é (só “Brasil” ou “Remoto”); para vê-las, marque também “não informa”. Os números são da última busca."
+          >
+            <AllChip
+              label="todos"
+              active={draft.states.length === 0}
+              onClick={() => patch({ states: [] })}
+            />
+            {stateChips(stateCounts, draft.states).map(({ state, count }) => (
+              <Chip
+                key={state}
+                keepCase
+                label={`${state === "nao-informa" ? "não informa" : BRAZIL_STATES[state]}${count === null ? "" : ` (${count})`}`}
+                active={draft.states.includes(state)}
+                onClick={() =>
+                  patch({ states: toggleIn(draft.states, state) })
+                }
+              />
+            ))}
+          </Group>
+
           <Group title="Modalidade" hint="A modalidade vem da fonte ou do título da vaga. Vaga que não informa continua aparecendo, a menos que você marque abaixo.">
             <AllChip
               label="todas"
@@ -300,6 +328,7 @@ export function FiltersModal({
               setDraft({
                 ...draft,
                 scope: null,
+                states: [],
                 workModels: [],
                 contractTypes: [],
                 seniorities: [],
@@ -359,17 +388,20 @@ function Chip({
   label,
   active,
   onClick,
+  keepCase = false,
 }: {
   label: string;
   active: boolean;
   onClick: () => void;
+  /** Nome próprio: `capitalize` escreveria "Rio De Janeiro". */
+  keepCase?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`cursor-pointer rounded-full border px-3 py-1 text-xs font-medium capitalize transition ${
+      className={`cursor-pointer rounded-full border px-3 py-1 text-xs font-medium transition ${keepCase ? "" : "capitalize"} ${
         active
           ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
           : "border-zinc-300 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
@@ -591,9 +623,36 @@ function AllChip(props: { label: string; active: boolean; onClick: () => void })
   return <Chip {...props} />;
 }
 
+/**
+ * Os chips de estado. Com a contagem da última busca, só os estados que têm
+ * vaga, do que tem mais para o que tem menos: 27 chips com zero esconderiam
+ * os que importam. Antes da primeira busca, todos em ordem alfabética. O que
+ * está marcado aparece sempre, mesmo zerado, para dar para desmarcar.
+ */
+function stateChips(
+  counts: DiscoverResult["byState"],
+  marked: StateFilter[],
+): { state: StateFilter; count: number | null }[] {
+  if (counts.length === 0) {
+    return [
+      ...(Object.keys(BRAZIL_STATES) as (keyof typeof BRAZIL_STATES)[])
+        .sort((a, b) => BRAZIL_STATES[a].localeCompare(BRAZIL_STATES[b]))
+        .map((state) => ({ state, count: null })),
+      { state: "nao-informa", count: null },
+    ];
+  }
+
+  const missing = marked
+    .filter((state) => !counts.some((row) => row.state === state))
+    .map((state) => ({ state, count: 0 }));
+
+  return [...counts, ...missing];
+}
+
 export function countMarked(preferences: JobPreferences): number {
   return (
     (preferences.scope ? 1 : 0) +
+    preferences.states.length +
     preferences.workModels.length +
     preferences.contractTypes.length +
     preferences.seniorities.length +
