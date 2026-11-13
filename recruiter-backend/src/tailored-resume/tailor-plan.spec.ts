@@ -2,6 +2,7 @@ import type { Resume } from '@recruit/shared';
 import { renderResume } from '../answers/answer-plan';
 import {
   finalizeTailored,
+  historyBlock,
   orderSkills,
   tailorPrompt,
   type ModelTailor,
@@ -163,6 +164,119 @@ describe('finalizeTailored', () => {
     );
 
     expect(result.aiTells.length).toBeGreaterThan(0);
+  });
+
+  it('sem histórico, a lista de itens a esconder vem vazia', () => {
+    expect(finalizeTailored(output(), RESUME, TEXT).excludedMentions).toEqual(
+      [],
+    );
+  });
+});
+
+/** Histórico SINTÉTICO: o que é verdade e ficou fora do currículo. */
+const HISTORY = {
+  notes:
+    'Na Empresa Antiga também mantive a API em Laravel e montei 37 pipelines de deploy.',
+  exclude: ['Agência Exemplo', 'Java'],
+};
+
+describe('finalizeTailored com histórico', () => {
+  it('o histórico prova a afirmação, como o currículo', () => {
+    const result = finalizeTailored(
+      output({
+        facts: [
+          { claim: 'Manteve API', quote: 'mantive a API em Laravel' },
+          { claim: 'Liderou time', quote: 'liderou um time de cinco pessoas' },
+        ],
+      }),
+      RESUME,
+      TEXT,
+      HISTORY,
+    );
+
+    expect(result.facts).toEqual([
+      { claim: 'Manteve API', grounded: true },
+      { claim: 'Liderou time', grounded: false },
+    ]);
+  });
+
+  it('número e tecnologia do histórico não viram alerta', () => {
+    const result = finalizeTailored(
+      output({
+        summary: 'Front-end com Vue; mantive API em Laravel e 37 pipelines.',
+      }),
+      RESUME,
+      TEXT,
+      HISTORY,
+    );
+
+    expect(result.unknownTechs).not.toContain('Laravel');
+    expect(result.unverifiedNumbers).toEqual([]);
+  });
+
+  it('sem o histórico, o mesmo texto é alerta: a fonte é que muda', () => {
+    const result = finalizeTailored(
+      output({
+        summary: 'Front-end com Vue; mantive API em Laravel e 37 pipelines.',
+      }),
+      RESUME,
+      TEXT,
+    );
+
+    expect(result.unknownTechs).toContain('Laravel');
+    expect(result.unverifiedNumbers).toEqual(['37']);
+  });
+
+  it('aponta item da lista "não incluir" que o texto novo citou', () => {
+    const result = finalizeTailored(
+      output({
+        summary: 'Sites em Drupal na agência exemplo e dashboards em Vue.',
+      }),
+      RESUME,
+      TEXT,
+      HISTORY,
+    );
+
+    expect(result.excludedMentions).toEqual(['Agência Exemplo']);
+  });
+
+  it('confere palavra inteira: "Java" não acusa "JavaScript"', () => {
+    const result = finalizeTailored(
+      output({ summary: 'Front-end com JavaScript e TypeScript.' }),
+      RESUME,
+      TEXT,
+      HISTORY,
+    );
+
+    expect(result.excludedMentions).toEqual([]);
+  });
+
+  it('só confere o texto novo: o que veio do original é escolha sua', () => {
+    // A experiência 1 é da Agência Exemplo e não foi reescrita.
+    const result = finalizeTailored(output(), RESUME, TEXT, HISTORY);
+
+    expect(result.excludedMentions).toEqual([]);
+  });
+});
+
+describe('historyBlock', () => {
+  it('sem notas nem lista, não manda bloco nenhum', () => {
+    expect(historyBlock({ notes: null, exclude: [] })).toBeNull();
+  });
+
+  it('manda o histórico e a lista, cada um na sua tag', () => {
+    const block = historyBlock(HISTORY)!;
+
+    expect(block).toContain('<historico>\nNa Empresa Antiga');
+    expect(block).toContain(
+      '<nao_incluir>\n- Agência Exemplo\n- Java\n</nao_incluir>',
+    );
+  });
+
+  it('só a lista, sem notas', () => {
+    expect(historyBlock({ notes: null, exclude: ['Java'] })).toBe(
+      '<nao_incluir>\n- Java\n</nao_incluir>',
+    );
   });
 });
 

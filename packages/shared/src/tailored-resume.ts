@@ -41,16 +41,25 @@ export const tailoredResumeSchema = z.object({
       after: z.array(z.string()),
     }),
   }),
-  /** Cada afirmação do texto novo, e se o trecho citado existe no currículo. */
+  /**
+   * Cada afirmação do texto novo, e se o trecho citado existe no currículo ou
+   * no histórico profissional: os dois são palavra sua, então os dois provam.
+   */
   facts: z.array(z.object({ claim: z.string(), grounded: z.boolean() })),
   /** O que a vaga pede e o currículo não mostra — e por isso NÃO foi incluído. */
   gaps: z.array(z.string()),
-  /** Números do texto novo que não estão no currículo. */
+  /** Números do texto novo que não estão no currículo nem no histórico. */
   unverifiedNumbers: z.array(z.string()),
-  /** Tecnologias citadas no texto novo que o currículo não menciona. */
+  /** Tecnologias citadas no texto novo que nem currículo nem histórico mencionam. */
   unknownTechs: z.array(z.string()),
   /** Vícios de texto de IA que sobraram, para você reescrever. */
   aiTells: z.array(z.string()),
+  /**
+   * Itens da sua lista "não incluir" que apareceram no texto novo. Conferido
+   * pelo servidor, sem depender de o modelo ter obedecido. Com padrão, para a
+   * resposta continuar válida em quem ainda não tem histórico.
+   */
+  excludedMentions: z.array(z.string()).default([]),
 });
 
 export type TailoredResume = z.infer<typeof tailoredResumeSchema>;

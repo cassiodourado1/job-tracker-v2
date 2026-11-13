@@ -273,15 +273,23 @@ function Field({
 function warningsOf(proposal: TailoredResume): string[] {
   const warnings: string[] = [];
 
+  // Primeiro da lista: é o único aviso sobre algo verdadeiro que você pediu
+  // para esconder, e mandar isso à empresa não tem volta.
+  if (proposal.excludedMentions.length > 0) {
+    warnings.push(
+      `Cita o que você marcou para não incluir: ${proposal.excludedMentions.join(", ")}.`,
+    );
+  }
+
   if (proposal.unknownTechs.length > 0) {
     warnings.push(
-      `Cita tecnologia que o seu currículo não menciona: ${proposal.unknownTechs.join(", ")}.`,
+      `Cita tecnologia que nem o currículo nem o histórico mencionam: ${proposal.unknownTechs.join(", ")}.`,
     );
   }
 
   if (proposal.unverifiedNumbers.length > 0) {
     warnings.push(
-      `Tem número que não está no seu currículo: ${proposal.unverifiedNumbers.join(", ")}.`,
+      `Tem número que não está no currículo nem no histórico: ${proposal.unverifiedNumbers.join(", ")}.`,
     );
   }
 
@@ -289,7 +297,7 @@ function warningsOf(proposal: TailoredResume): string[] {
 
   if (ungrounded.length > 0) {
     warnings.push(
-      `Afirmação sem trecho do currículo que a prove: ${ungrounded.map((fact) => fact.claim).join("; ")}.`,
+      `Afirmação sem trecho do currículo ou do histórico que a prove: ${ungrounded.map((fact) => fact.claim).join("; ")}.`,
     );
   }
 

@@ -1,6 +1,7 @@
 export * from './application';
 export * from './application-status';
 export * from './brazil-state';
+export * from './career-history';
 export * from './email';
 export * from './job';
 export * from './job-extraction';

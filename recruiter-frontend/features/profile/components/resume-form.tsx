@@ -2,7 +2,12 @@
 
 import Link from "next/link";
 import { useCallback, useState, useTransition } from "react";
-import { ageFromBirthDate, emptyResume } from "@recruit/shared";
+import {
+  CAREER_EXCLUDE_MAX,
+  CAREER_NOTES_MAX,
+  ageFromBirthDate,
+  emptyResume,
+} from "@recruit/shared";
 import type {
   Certification,
   Education,
@@ -40,6 +45,10 @@ export function ResumeForm({ profile }: { profile: ProfileDetail }) {
     links: profile.links,
   });
   const [resume, setResume] = useState<Resume>(profile.resume ?? emptyResume);
+  const [notes, setNotes] = useState(profile.history.notes ?? "");
+  // Texto, e não lista: um item por linha é o jeito mais rápido de escrever, e
+  // converter a cada tecla apagaria a linha em branco que você acabou de abrir.
+  const [exclude, setExclude] = useState(profile.history.exclude.join("\n"));
   const [feedback, setFeedback] = useState<
     { kind: "ok" | "erro"; message: string } | null
   >(null);
@@ -118,6 +127,10 @@ export function ResumeForm({ profile }: { profile: ProfileDetail }) {
         location: personal.location || null,
         links: personal.links,
         resume,
+        history: {
+          notes: notes.trim() || null,
+          exclude: excludeItems(exclude),
+        },
       });
 
       if (result.status === "success") {
@@ -455,6 +468,55 @@ export function ResumeForm({ profile }: { profile: ProfileDetail }) {
           </div>
         )}
       />
+
+      <section className="flex flex-col gap-3 border-t border-zinc-200 pt-6 dark:border-zinc-800">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-sm font-semibold">Histórico profissional</h2>
+          <p className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+            A trajetória inteira, mais longa que o currículo: projetos,
+            clientes, tecnologias e resultados que não couberam nele. O
+            currículo adaptado e as respostas de formulário podem usar o que
+            está aqui, e cada afirmação continua sendo conferida contra este
+            texto. Vai inteiro ao Claude, então escreva só a parte
+            profissional: sem contato, documento ou dado de saúde.
+          </p>
+        </div>
+        <Field
+          label={`Histórico (${notes.length.toLocaleString("pt-BR")} de ${CAREER_NOTES_MAX.toLocaleString("pt-BR")} caracteres)`}
+          multiline
+          placeholder="Ex.: Na Empresa X (2019 a 2021), migrei o portal de Drupal 7 para Drupal 9 com uma equipe de três pessoas…"
+          value={notes}
+          error={
+            notes.length > CAREER_NOTES_MAX
+              ? `Passou do limite de ${CAREER_NOTES_MAX.toLocaleString("pt-BR")} caracteres`
+              : undefined
+          }
+          onValueChange={setNotes}
+        />
+        <Field
+          label={`Não incluir (um por linha, até ${CAREER_EXCLUDE_MAX})`}
+          multiline
+          placeholder={"Ex.: Empresa Y\nAngularJS"}
+          value={exclude}
+          onValueChange={setExclude}
+        />
+        <p className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+          O que é verdade mas não deve ir para a empresa. Se um texto gerado
+          citar um destes itens, a revisão avisa.
+        </p>
+      </section>
     </div>
   );
+}
+
+/** Uma linha, um item; repetido e linha vazia saem. */
+function excludeItems(text: string): string[] {
+  return [
+    ...new Set(
+      text
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean),
+    ),
+  ];
 }

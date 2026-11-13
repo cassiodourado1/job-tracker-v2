@@ -1,5 +1,10 @@
 import { z } from 'zod';
-import type { Resume, TailoredResume } from '@recruit/shared';
+import {
+  emptyCareerHistory,
+  type CareerHistory,
+  type Resume,
+  type TailoredResume,
+} from '@recruit/shared';
 import {
   aiTells,
   clean,
@@ -26,6 +31,10 @@ export const TAILOR_SYSTEM = [
   '',
   'Regra principal: você REORGANIZA e REESCREVE o que já está no currículo, nunca acrescenta. Não invente empresa, projeto, cliente, número, tempo de experiência, tecnologia, cargo ou resultado. Se a vaga pede algo que o currículo não mostra, registre em `gaps` e NÃO escreva aquilo no currículo, nem de forma vaga ("familiaridade com…", "noções de…").',
   '',
+  'Histórico profissional: a pessoa pode ter escrito, em <historico>, fatos verdadeiros da trajetória dela que não couberam no currículo. Eles valem como o currículo: se a vaga pede algo que está no histórico, traga para o resumo ou para a descrição da experiência onde aquilo aconteceu. Só para essa experiência: um fato do histórico não muda de empresa. O que não está nem no currículo nem no histórico vai para `gaps`.',
+  '',
+  'Lista <nao_incluir>: são coisas verdadeiras que a pessoa NÃO quer mostrar às empresas. Não escreva nenhum desses itens no texto novo, nem parafraseado.',
+  '',
   'O que você pode mudar:',
   '- `summary`: o resumo profissional, reescrito para abrir com o que a vaga mais valoriza e o currículo mostra. De 2 a 4 frases. Se o currículo não tem resumo, escreva um só com fatos do currículo.',
   '- `experiences`: para cada experiência que vale ajustar, o `index` dela (o número em [ ] na lista de experiências da mensagem) e a nova `description`. Traga para o começo o que a vaga pede, corte o que não interessa a ela, mantenha cada fato verdadeiro. Experiência que não precisa de ajuste fica de fora da lista.',
@@ -33,7 +42,7 @@ export const TAILOR_SYSTEM = [
   '',
   'Empresa, cargo, datas, formação, idiomas e certificações não mudam e não são devolvidos.',
   '',
-  'Para cada afirmação sobre a pessoa no resumo e nas descrições novas, preencha `facts` com a afirmação e, em `quote`, um trecho copiado LITERALMENTE do <curriculo> que a sustenta (poucas palavras, exatamente como estão lá).',
+  'Para cada afirmação sobre a pessoa no resumo e nas descrições novas, preencha `facts` com a afirmação e, em `quote`, um trecho copiado LITERALMENTE do <curriculo> ou do <historico> que a sustenta (poucas palavras, exatamente como estão lá).',
   '',
   'Como escrever:',
   '- Escreva no mesmo idioma do currículo.',
@@ -85,19 +94,62 @@ export function tailorPrompt(job: FitJob, resume: Resume): string {
 }
 
 /**
+ * O histórico e a lista "não incluir", no formato que o `TAILOR_SYSTEM`
+ * descreve. `null` quando não há nada: um bloco vazio só gastaria cache e
+ * convidaria o modelo a procurar o que não existe.
+ *
+ * A lista vai ao modelo mesmo sendo conferida na volta: o item que se quer
+ * esconder costuma estar no próprio histórico, e sem a lista o modelo o
+ * traria de boa-fé. A conferência é a garantia; a lista evita o retrabalho.
+ */
+export function historyBlock(history: CareerHistory): string | null {
+  const parts: string[] = [];
+
+  if (history.notes) {
+    parts.push(`<historico>\n${history.notes}\n</historico>`);
+  }
+
+  if (history.exclude.length > 0) {
+    parts.push(
+      `<nao_incluir>\n${history.exclude.map((item) => `- ${item}`).join('\n')}\n</nao_incluir>`,
+    );
+  }
+
+  return parts.length > 0 ? parts.join('\n\n') : null;
+}
+
+/**
+ * Itens da lista "não incluir" que aparecem no texto, como palavra inteira:
+ * "Java" não pode acusar "JavaScript". Sem caixa e sem acento, como as outras
+ * conferências.
+ */
+export function excludedMentions(written: string, exclude: string[]): string[] {
+  const text = fold(written);
+
+  return exclude.filter((item) => {
+    const needle = fold(item).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    return new RegExp(`(^|[^a-z0-9])${needle}($|[^a-z0-9])`).test(text);
+  });
+}
+
+/**
  * Da proposta do modelo para o currículo que a tela revisa.
  *
  * O que é estrutura vem sempre do original: o modelo não tem como mudar
  * empresa, cargo ou data, nem criar uma experiência — um índice que não
  * existe é ignorado. O que é texto novo passa pelas mesmas conferências das
- * respostas de formulário, contra o currículo e só contra ele.
+ * respostas de formulário, contra o currículo e o histórico, e só contra eles:
+ * os dois são palavra sua, a vaga não.
  */
 export function finalizeTailored(
   output: ModelTailor,
   original: Resume,
   resumeText: string,
+  history: CareerHistory = emptyCareerHistory,
 ): TailoredResume {
-  const trusted = fold(resumeText);
+  const source = [resumeText, history.notes ?? ''].join('\n');
+  const trusted = fold(source);
 
   const summary = limit(clean(output.summary)) ?? original.summary;
 
@@ -131,8 +183,8 @@ export function finalizeTailored(
 
   // Tecnologia que aparece no texto novo e em nenhum lugar do currículo é a
   // forma mais comum de invenção num currículo adaptado: a vaga pede Angular,
-  // e "Angular" entra numa descrição.
-  const known = new Set(stackLabelsIn(resumeText));
+  // e "Angular" entra numa descrição. Se está no histórico, é sua.
+  const known = new Set(stackLabelsIn(source));
 
   return {
     resume: { ...original, summary, experiences, skills },
@@ -160,6 +212,7 @@ export function finalizeTailored(
     unverifiedNumbers: unverifiedNumbers(written, trusted),
     unknownTechs: stackLabelsIn(written).filter((tech) => !known.has(tech)),
     aiTells: aiTells(written),
+    excludedMentions: excludedMentions(written, history.exclude),
   };
 }
 
