@@ -96,6 +96,11 @@ export const metricsSchema = z.object({
 
   /** Fora do funil: terminal a partir de qualquer etapa. */
   rejected: z.number().int().min(0),
+  /**
+   * Fora do funil e fora das recusas: a vaga deixou de existir sem decisão
+   * sobre você. Separado de `rejected` para a recusa medir só recusa.
+   */
+  cancelled: z.number().int().min(0),
   /** Fora do funil: ainda não enviadas. */
   drafts: z.number().int().min(0),
 

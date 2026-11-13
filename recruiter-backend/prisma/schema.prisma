@@ -18,7 +18,9 @@ datasource db {
 // ---------------------------------------------------------------------------
 
 /// Fluxo esperado: rascunho -> aplicado -> triagem -> entrevista -> teste ->
-/// oferta. `rejeitado` pode vir de qualquer estágio.
+/// oferta. `rejeitado` e `cancelado` podem vir de qualquer estágio: o
+/// primeiro é a empresa recusando você, o segundo é a vaga deixando de
+/// existir sem decisão sobre você (ver `application-status.ts` no shared).
 enum ApplicationStatus {
   rascunho
   aplicado
@@ -27,6 +29,7 @@ enum ApplicationStatus {
   teste
   oferta
   rejeitado
+  cancelado
 }
 
 /// De onde veio a transição de status. `ia` significa que um modelo leu um

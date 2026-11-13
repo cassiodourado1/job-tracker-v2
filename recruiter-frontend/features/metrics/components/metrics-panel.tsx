@@ -48,7 +48,18 @@ export function MetricsPanel({ metrics }: { metrics: Metrics }) {
           <section className="grid grid-cols-2 gap-4 md:grid-cols-4 2xl:grid-cols-8">
             <Tile index={0} label="Ativas" value={metrics.active} />
             <Tile index={1} label="Responderam" value={metrics.answered} hint="saíram de aplicado" />
-            <Tile index={2} label="Rejeitadas" value={metrics.rejected} />
+            {/* Canceladas viram dica, e não um nono quadro: a faixa foi
+                desenhada para oito lado a lado. */}
+            <Tile
+              index={2}
+              label="Rejeitadas"
+              value={metrics.rejected}
+              hint={
+                metrics.cancelled > 0
+                  ? `fora ${metrics.cancelled} ${metrics.cancelled === 1 ? "vaga cancelada" : "vagas canceladas"}`
+                  : undefined
+              }
+            />
             <Tile index={3} label="Em rascunho" value={metrics.drafts} hint="ainda não enviadas" />
             <Tile
               index={4}

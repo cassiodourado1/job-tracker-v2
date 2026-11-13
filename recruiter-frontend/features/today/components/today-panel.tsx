@@ -133,6 +133,7 @@ const ADVICE: Record<ApplicationStatus, (days: number) => string> = {
   teste: (d) => `No teste há ${d} dias — confira o prazo ou peça retorno.`,
   oferta: (d) => `Proposta aberta há ${d} dias — responda à empresa.`,
   rejeitado: () => "",
+  cancelado: () => "",
 };
 
 function FollowUpItem({ item }: { item: DueFollowUp }) {

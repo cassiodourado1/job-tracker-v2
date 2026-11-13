@@ -85,6 +85,31 @@ describe('isActionable', () => {
   it('rejeição vale a partir de qualquer etapa, até da oferta', () => {
     expect(isActionable(fato('rejeitado', 'oferta'))).toBe(true);
   });
+
+  it('cancelamento também vale a partir de qualquer etapa', () => {
+    // `cancelado` vem depois de tudo no enum, mas não é por isso que passa:
+    // passa porque encerra. O teste de baixo prova que não é a profundidade.
+    expect(isActionable(fato('cancelado', 'teste'))).toBe(true);
+  });
+
+  it('vaga cancelada também não reabre', () => {
+    expect(isActionable(fato('entrevista', 'cancelado'))).toBe(false);
+  });
+
+  it('recusa não sobrescreve um cancelamento já registrado, nem o contrário', () => {
+    expect(isActionable(fato('rejeitado', 'cancelado'))).toBe(false);
+    expect(isActionable(fato('cancelado', 'rejeitado'))).toBe(false);
+  });
+
+  it('cancelamento registrado depois do email conta como "já li"', () => {
+    expect(
+      isActionable(
+        fato('triagem', 'aplicado', {
+          events: [{ toStatus: 'cancelado', occurredAt: DEPOIS }],
+        }),
+      ),
+    ).toBe(false);
+  });
 });
 
 describe('pickSuggestions', () => {

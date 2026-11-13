@@ -1,4 +1,4 @@
-import { APPLICATION_STATUSES } from "@recruit/shared";
+import { APPLICATION_STATUSES, isClosedStatus } from "@recruit/shared";
 import type { Application, ApplicationStatus } from "@recruit/shared";
 
 /**
@@ -144,14 +144,14 @@ function localDay(iso: string): Date {
 }
 
 /**
- * A ordem do funil, com `rejeitado` no fim: ele encerra a partir de qualquer
- * etapa e não é um degrau mais fundo que `oferta`. Ordenar por "avanço" com
- * rejeitado no topo esconderia as ofertas debaixo das recusas.
+ * A ordem do funil, com `rejeitado` e `cancelado` no fim: encerram a partir
+ * de qualquer etapa e não são degraus mais fundos que `oferta`. Ordenar por
+ * "avanço" com eles no topo esconderia as ofertas debaixo das recusas.
  */
 const FUNNEL_DEPTH: Record<ApplicationStatus, number> = Object.fromEntries(
   APPLICATION_STATUSES.map((status, index) => [
     status,
-    status === "rejeitado" ? -1 : index,
+    isClosedStatus(status) ? -1 : index,
   ]),
 ) as Record<ApplicationStatus, number>;
 
@@ -178,9 +178,9 @@ function comparator(
   }
 }
 
-/** Do começo do funil para o fim, e `rejeitado` por último também aqui. */
+/** Do começo do funil para o fim, e os encerrados por último também aqui. */
 function early(status: ApplicationStatus): number {
-  return status === "rejeitado"
+  return isClosedStatus(status)
     ? APPLICATION_STATUSES.length
     : FUNNEL_DEPTH[status];
 }

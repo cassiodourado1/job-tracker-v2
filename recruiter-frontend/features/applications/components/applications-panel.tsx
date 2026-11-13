@@ -322,6 +322,7 @@ const statusStripe: Record<Application["status"], string> = {
   teste: "bg-gradient-to-r from-amber-500 to-yellow-300",
   oferta: "bg-gradient-to-r from-emerald-500 to-teal-300",
   rejeitado: "bg-gradient-to-r from-red-600 to-rose-400",
+  cancelado: "bg-gradient-to-r from-stone-500 to-stone-300",
 };
 
 /** O que a vaga declara e ajuda a lembrar qual era: modalidade, local, nível. */

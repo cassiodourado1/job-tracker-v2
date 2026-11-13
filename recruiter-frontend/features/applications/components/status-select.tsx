@@ -23,6 +23,7 @@ export const statusDot: Record<ApplicationStatus, string> = {
   teste: "bg-amber-400 shadow-amber-400/60",
   oferta: "bg-emerald-400 shadow-emerald-400/60",
   rejeitado: "bg-red-400 shadow-red-400/60",
+  cancelado: "bg-stone-400 shadow-stone-400/60",
 };
 
 const statusHint: Record<ApplicationStatus, string> = {
@@ -32,7 +33,8 @@ const statusHint: Record<ApplicationStatus, string> = {
   entrevista: "conversa marcada",
   teste: "desafio técnico",
   oferta: "proposta recebida",
-  rejeitado: "processo encerrado",
+  rejeitado: "a empresa não seguiu com você",
+  cancelado: "a vaga deixou de existir",
 };
 
 /**
@@ -77,8 +79,9 @@ export function StatusSelect({
       selectedKey={shown}
       onChoose={choose}
       label="Mudar status"
-      // Rejeição não é um degrau do funil: uma linha a separa das etapas,
-      // como no painel.
+      // Rejeição e cancelamento não são degraus do funil: uma linha os separa
+      // das etapas, como no painel. Uma linha só, antes do primeiro deles, e
+      // os dois ficam juntos embaixo dela.
       separatorBefore={isRejection}
       renderTrigger={(trigger, open) => (
         <motion.button
