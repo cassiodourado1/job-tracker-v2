@@ -1,5 +1,10 @@
 import { z } from 'zod';
-import type { AnswerDraft, AnswerMode, Resume } from '@recruit/shared';
+import type {
+  AnswerDraft,
+  AnswerMode,
+  CareerHistory,
+  Resume,
+} from '@recruit/shared';
 
 /**
  * Responder pergunta de formulário: o que vai para o modelo, o que ele pode
@@ -124,13 +129,15 @@ export function isResumeEmpty(resume: Resume): boolean {
  */
 export const ANSWER_SYSTEM = [
   'Você ajuda uma pessoa a responder perguntas de formulários de candidatura a vagas de emprego.',
-  'Você recebe o currículo dela (em <curriculo>), a vaga (em <vaga>), a pergunta (em <pergunta>) e, às vezes, anotações dela (em <anotacoes>).',
+  'Você recebe o currículo dela (em <curriculo>), a vaga (em <vaga>), a pergunta (em <pergunta>) e, às vezes, o histórico profissional dela (em <historico>) e anotações dela (em <anotacoes>).',
   '',
-  'Regra principal: só afirme sobre a pessoa o que está no <curriculo> ou nas <anotacoes>. Nunca invente empresa, projeto, cliente, número, tempo de experiência, tecnologia, cargo ou resultado. Se a pergunta ou a vaga pedem algo que o currículo não sustenta, registre em `gaps` e responda sem afirmar aquilo — é melhor uma resposta honesta e mais curta do que uma que cai na entrevista.',
+  'O <historico> traz fatos verdadeiros da trajetória que não couberam no currículo, e vale como o currículo. Um fato do histórico continua na empresa onde aconteceu. A lista <nao_incluir> traz coisas verdadeiras que a pessoa NÃO quer mostrar: não cite nenhum desses itens, nem parafraseado.',
+  '',
+  'Regra principal: só afirme sobre a pessoa o que está no <curriculo>, no <historico> ou nas <anotacoes>. Nunca invente empresa, projeto, cliente, número, tempo de experiência, tecnologia, cargo ou resultado. Se a pergunta ou a vaga pedem algo que o currículo não sustenta, registre em `gaps` e responda sem afirmar aquilo: é melhor uma resposta honesta e mais curta do que uma que cai na entrevista.',
   '',
   'O que você listar em `gaps` não pode aparecer afirmado na resposta nem nos tópicos, nem como hábito ou jeito de trabalhar ("costumo…", "sempre…"). Se não sobrar o que dizer, a resposta fica curta.',
   '',
-  'Para cada afirmação sobre a pessoa, preencha `facts` com a afirmação, a origem em palavras e, em `quote`, um trecho copiado LITERALMENTE do <curriculo> ou das <anotacoes> que a sustenta (poucas palavras, exatamente como estão lá).',
+  'Para cada afirmação sobre a pessoa, preencha `facts` com a afirmação, a origem em palavras e, em `quote`, um trecho copiado LITERALMENTE do <curriculo>, do <historico> ou das <anotacoes> que a sustenta (poucas palavras, exatamente como estão lá).',
   '',
   'Como escrever, para soar como a própria pessoa e não como texto de IA:',
   '- Primeira pessoa, tom de conversa profissional com recrutador. Nem formal de redação, nem informal.',
@@ -238,14 +245,20 @@ export function finalize(
     notes: string | null;
     question: string;
     jobText: string;
+    /** Opcional: sem histórico, as conferências ficam como eram. */
+    history?: CareerHistory;
   },
 ): AnswerDraft {
-  const trusted = fold(`${context.resumeText}\n${context.notes ?? ''}`);
+  // O histórico é palavra sua, como o currículo e as anotações: prova.
+  const yours = [
+    context.resumeText,
+    context.notes ?? '',
+    context.history?.notes ?? '',
+  ].join('\n');
+  const trusted = fold(yours);
   // Número pode vir da vaga ou da pergunta ("vaga de 6 meses", "em até 500
   // caracteres") sem ser afirmação sobre você.
-  const known = fold(
-    `${context.resumeText}\n${context.notes ?? ''}\n${context.question}\n${context.jobText}`,
-  );
+  const known = fold(`${yours}\n${context.question}\n${context.jobText}`);
 
   const topics = context.mode === 'topics' ? output.topics.slice(0, 8) : [];
   const draft = context.mode === 'draft' ? clean(output.draft) : null;
@@ -275,6 +288,7 @@ export function finalize(
       .slice(0, 6),
     unverifiedNumbers: unverifiedNumbers(written, known),
     aiTells: aiTells(written),
+    excludedMentions: excludedMentions(written, context.history?.exclude ?? []),
     maxChars: context.maxChars,
     overLimit:
       context.maxChars !== null && (draft?.length ?? 0) > context.maxChars,
@@ -406,6 +420,24 @@ const TELLS: { label: string; pattern: RegExp }[] = [
     pattern: /^(claro|com certeza|otima pergunta)\b/,
   },
 ];
+
+/**
+ * Itens da lista "não incluir" do histórico profissional que aparecem no
+ * texto, como palavra inteira: "Java" não pode acusar "JavaScript". Sem caixa
+ * e sem acento, como as outras conferências daqui.
+ *
+ * Mora com elas porque é a mesma família de garantia: o modelo recebe a lista
+ * para evitar, mas quem garante é o servidor, sem depender de ele obedecer.
+ */
+export function excludedMentions(written: string, exclude: string[]): string[] {
+  const text = fold(written);
+
+  return exclude.filter((item) => {
+    const needle = fold(item).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    return new RegExp(`(^|[^a-z0-9])${needle}($|[^a-z0-9])`).test(text);
+  });
+}
 
 export function aiTells(written: string): string[] {
   // `fold` tira acento e caixa, mas mantém pontuação: o travessão continua

@@ -298,6 +298,7 @@ function Warnings({ result }: { result: AnswerDraft }) {
     ungrounded.length === 0 &&
     result.unverifiedNumbers.length === 0 &&
     result.aiTells.length === 0 &&
+    result.excludedMentions.length === 0 &&
     !result.overLimit
   ) {
     return null;
@@ -305,15 +306,23 @@ function Warnings({ result }: { result: AnswerDraft }) {
 
   return (
     <div className="flex flex-col gap-2">
+      {/* Primeiro: é verdade, mas você pediu para não mostrar, e resposta
+          enviada não tem volta. */}
+      {result.excludedMentions.length > 0 && (
+        <Notice tone="red" title="Cita o que você marcou para não incluir">
+          {result.excludedMentions.join(", ")}. Tire da resposta antes de usar.
+        </Notice>
+      )}
+
       {result.unverifiedNumbers.length > 0 && (
-        <Notice tone="red" title="Números que não estão no seu currículo">
+        <Notice tone="red" title="Números que não estão no seu currículo nem no histórico">
           {result.unverifiedNumbers.join(", ")} — confira antes de usar.
           Número inventado é o que mais facilmente se desmente numa entrevista.
         </Notice>
       )}
 
       {ungrounded.length > 0 && (
-        <Notice tone="red" title="Afirmações sem trecho correspondente no currículo">
+        <Notice tone="red" title="Afirmações sem trecho correspondente no currículo ou no histórico">
           <ul className="flex list-disc flex-col gap-0.5 pl-4">
             {ungrounded.map((fact, index) => (
               <li key={index}>{fact.claim}</li>

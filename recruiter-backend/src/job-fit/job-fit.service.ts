@@ -18,8 +18,12 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { resumeSchema, type JobFit } from '@recruit/shared';
+import { resumeSchema, type CareerHistory, type JobFit } from '@recruit/shared';
 import { isResumeEmpty, renderResume } from '../answers/answer-plan';
+import {
+  historySystemBlocks,
+  loadCareerHistory,
+} from '../career-history/history-context';
 import type { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -68,9 +72,10 @@ export class JobFitService {
       });
     }
 
-    const [resumeText, job] = await Promise.all([
+    const [resumeText, job, history] = await Promise.all([
       this.resumeOf(profileId),
       this.jobOf(jobId),
+      loadCareerHistory(this.prisma, profileId),
     ]);
 
     this.assertWithinRateLimit();
@@ -78,7 +83,7 @@ export class JobFitService {
     let message: Awaited<ReturnType<JobFitService['ask']>>;
 
     try {
-      message = await this.ask(resumeText, job);
+      message = await this.ask(resumeText, history, job);
     } catch (error) {
       this.failFromAnthropic(error);
     }
@@ -97,7 +102,7 @@ export class JobFitService {
       });
     }
 
-    return finalizeFit(message.parsed_output, resumeText);
+    return finalizeFit(message.parsed_output, resumeText, history);
   }
 
   /**
@@ -106,7 +111,7 @@ export class JobFitService {
    * validada por Zod (§4). `fallbacks: "default"` refaz a chamada em outro
    * modelo se a primeira for recusada por engano.
    */
-  private ask(resumeText: string, job: FitJob) {
+  private ask(resumeText: string, history: CareerHistory, job: FitJob) {
     return this.client!.beta.messages.parse({
       model: MODEL,
       max_tokens: 16_000,
@@ -123,6 +128,7 @@ export class JobFitService {
           text: `<curriculo>\n${resumeText}\n</curriculo>`,
           cache_control: { type: 'ephemeral' },
         },
+        ...historySystemBlocks(history),
       ],
       messages: [{ role: 'user', content: fitPrompt(job) }],
     });

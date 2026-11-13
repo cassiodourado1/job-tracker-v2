@@ -21,11 +21,16 @@ import { ConfigService } from '@nestjs/config';
 import {
   interviewPrepSchema,
   resumeSchema,
+  type CareerHistory,
   type InterviewPrepLookup,
   type InterviewPrepRequest,
   type SavedInterviewPrep,
 } from '@recruit/shared';
 import { isResumeEmpty, renderResume } from '../answers/answer-plan';
+import {
+  historySystemBlocks,
+  loadCareerHistory,
+} from '../career-history/history-context';
 import type { Env } from '../config/env';
 import { jobHasSubstance, type FitJob } from '../job-fit/fit-plan';
 import { PrismaService } from '../prisma/prisma.service';
@@ -73,9 +78,10 @@ export class InterviewPrepService {
       });
     }
 
-    const [resumeText, job] = await Promise.all([
+    const [resumeText, job, history] = await Promise.all([
       this.resumeOf(input.profileId),
       this.jobOf(input.jobId),
+      loadCareerHistory(this.prisma, input.profileId),
     ]);
     const context = input.context || null;
 
@@ -84,7 +90,7 @@ export class InterviewPrepService {
     let message: Awaited<ReturnType<InterviewPrepService['ask']>>;
 
     try {
-      message = await this.ask(resumeText, job, context);
+      message = await this.ask(resumeText, history, job, context);
     } catch (error) {
       this.failFromAnthropic(error);
     }
@@ -103,7 +109,12 @@ export class InterviewPrepService {
       });
     }
 
-    const prep = finalizePrep(message.parsed_output, resumeText, context);
+    const prep = finalizePrep(
+      message.parsed_output,
+      resumeText,
+      context,
+      history,
+    );
 
     const saved = await this.prisma.interviewPrep.create({
       data: {
@@ -153,7 +164,12 @@ export class InterviewPrepService {
    * chamadas: preparar a segunda vaga paga só a vaga. Saída estruturada
    * validada por Zod (§4).
    */
-  private ask(resumeText: string, job: FitJob, context: string | null) {
+  private ask(
+    resumeText: string,
+    history: CareerHistory,
+    job: FitJob,
+    context: string | null,
+  ) {
     return this.client!.beta.messages.parse({
       model: MODEL,
       max_tokens: 16_000,
@@ -170,6 +186,7 @@ export class InterviewPrepService {
           text: `<curriculo>\n${resumeText}\n</curriculo>`,
           cache_control: { type: 'ephemeral' },
         },
+        ...historySystemBlocks(history),
       ],
       messages: [{ role: 'user', content: prepPrompt(job, context) }],
     });

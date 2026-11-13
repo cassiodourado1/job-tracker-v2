@@ -98,3 +98,49 @@ describe('finalizePrep', () => {
     ]);
   });
 });
+
+describe('finalizePrep com histórico', () => {
+  const HISTORICO = {
+    notes:
+      'Na Empresa Antiga também criei o módulo de exportação para Excel usado por 12 lojas.',
+    exclude: ['Empresa Beta'],
+  };
+  const comHistorico = output({
+    questions: [
+      {
+        question: 'Conte algo que você construiu no back-end.',
+        category: 'experiencia',
+        why: 'A vaga é full stack.',
+        answerPoints: [
+          {
+            point: 'Módulo de exportação para Excel usado por 12 lojas',
+            quote: 'criei o módulo de exportação para Excel',
+          },
+          {
+            point: 'Também passei pela Empresa Beta',
+            quote: '',
+          },
+        ],
+      },
+    ],
+  });
+
+  it('o histórico prova o ponto de resposta e o número', () => {
+    const prep = finalizePrep(comHistorico, RESUME_TEXT, null, HISTORICO);
+
+    expect(prep.questions[0].answerPoints[0].grounded).toBe(true);
+    expect(prep.unverifiedNumbers).toEqual([]);
+  });
+
+  it('aponta o que você pediu para não mostrar', () => {
+    const prep = finalizePrep(comHistorico, RESUME_TEXT, null, HISTORICO);
+
+    expect(prep.excludedMentions).toEqual(['Empresa Beta']);
+  });
+
+  it('sem histórico, a lista vem vazia', () => {
+    expect(finalizePrep(output(), RESUME_TEXT, null).excludedMentions).toEqual(
+      [],
+    );
+  });
+});
