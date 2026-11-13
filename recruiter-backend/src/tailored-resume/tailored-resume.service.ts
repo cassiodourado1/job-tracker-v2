@@ -19,7 +19,10 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
+  careerHistorySchema,
+  emptyCareerHistory,
   resumeSchema,
+  type CareerHistory,
   type Resume,
   type SaveTailoredResumeInput,
   type TailoredResume,
@@ -32,6 +35,7 @@ import { jobHasSubstance, type FitJob } from '../job-fit/fit-plan';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   finalizeTailored,
+  historyBlock,
   modelTailorSchema,
   TAILOR_SYSTEM,
   tailorPrompt,
@@ -76,9 +80,10 @@ export class TailoredResumeService {
       });
     }
 
-    const [resume, job] = await Promise.all([
+    const [resume, job, history] = await Promise.all([
       this.resumeOf(profileId),
       this.jobOf(jobId),
+      this.historyOf(profileId),
     ]);
 
     if (!jobHasSubstance(job)) {
@@ -96,7 +101,7 @@ export class TailoredResumeService {
     let message: Awaited<ReturnType<TailoredResumeService['ask']>>;
 
     try {
-      message = await this.ask(resumeText, resume, job);
+      message = await this.ask(resumeText, resume, job, history);
     } catch (error) {
       this.failFromAnthropic(error);
     }
@@ -115,7 +120,7 @@ export class TailoredResumeService {
       });
     }
 
-    return finalizeTailored(message.parsed_output, resume, resumeText);
+    return finalizeTailored(message.parsed_output, resume, resumeText, history);
   }
 
   /**
@@ -179,7 +184,14 @@ export class TailoredResumeService {
    * de aderência: adaptar para a segunda vaga paga só a vaga. Saída
    * estruturada validada por Zod (§4).
    */
-  private ask(resumeText: string, resume: Resume, job: FitJob) {
+  private ask(
+    resumeText: string,
+    resume: Resume,
+    job: FitJob,
+    history: CareerHistory,
+  ) {
+    const extra = historyBlock(history);
+
     return this.client!.beta.messages.parse({
       model: MODEL,
       max_tokens: 16_000,
@@ -196,9 +208,35 @@ export class TailoredResumeService {
           text: `<curriculo>\n${resumeText}\n</curriculo>`,
           cache_control: { type: 'ephemeral' },
         },
+        // Depois do currículo, com marcador próprio: o histórico muda mais
+        // que o currículo, e editar o histórico não deve invalidar o cache
+        // do bloco de cima.
+        ...(extra
+          ? [
+              {
+                type: 'text' as const,
+                text: extra,
+                cache_control: { type: 'ephemeral' as const },
+              },
+            ]
+          : []),
       ],
       messages: [{ role: 'user', content: tailorPrompt(job, resume) }],
     });
+  }
+
+  /**
+   * O histórico do perfil. Ilegível ou ausente vira vazio, e não erro: ele é
+   * um extra, e a adaptação funciona sem ele como funcionava antes.
+   */
+  private async historyOf(profileId: string): Promise<CareerHistory> {
+    const profile = await this.prisma.profile.findUnique({
+      where: { id: profileId },
+      select: { careerHistory: true },
+    });
+    const history = careerHistorySchema.safeParse(profile?.careerHistory);
+
+    return history.success ? history.data : emptyCareerHistory;
   }
 
   private async resumeOf(profileId: string): Promise<Resume> {
