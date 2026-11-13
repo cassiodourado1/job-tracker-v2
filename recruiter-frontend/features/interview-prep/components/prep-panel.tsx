@@ -88,10 +88,18 @@ export function PrepPanel({
             {saved.context ? ` · etapa: ${saved.context}` : ""}
           </span>
 
+          {/* Antes dos números: é verdade, mas você pediu para não mostrar. */}
+          {prep.excludedMentions.length > 0 && (
+            <p className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+              Os pontos de resposta citam o que você marcou para não incluir (
+              {prep.excludedMentions.join(", ")}). Evite tocar nisso na entrevista.
+            </p>
+          )}
+
           {prep.unverifiedNumbers.length > 0 && (
             <p className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-              Confira estes números antes de usar: não estão no seu currículo (
-              {prep.unverifiedNumbers.join(", ")}).
+              Confira estes números antes de usar: não estão no seu currículo nem no
+              histórico ({prep.unverifiedNumbers.join(", ")}).
             </p>
           )}
 

@@ -8,10 +8,12 @@ import {
 import {
   aiTells,
   clean,
+  excludedMentions,
   fold,
   grounded,
   unverifiedNumbers,
 } from '../answers/answer-plan';
+import { historyText } from '../career-history/history-context';
 import { jobText, type FitJob } from '../job-fit/fit-plan';
 import { stackLabelsIn } from '../job/discovery/normalize';
 
@@ -94,46 +96,6 @@ export function tailorPrompt(job: FitJob, resume: Resume): string {
 }
 
 /**
- * O histórico e a lista "não incluir", no formato que o `TAILOR_SYSTEM`
- * descreve. `null` quando não há nada: um bloco vazio só gastaria cache e
- * convidaria o modelo a procurar o que não existe.
- *
- * A lista vai ao modelo mesmo sendo conferida na volta: o item que se quer
- * esconder costuma estar no próprio histórico, e sem a lista o modelo o
- * traria de boa-fé. A conferência é a garantia; a lista evita o retrabalho.
- */
-export function historyBlock(history: CareerHistory): string | null {
-  const parts: string[] = [];
-
-  if (history.notes) {
-    parts.push(`<historico>\n${history.notes}\n</historico>`);
-  }
-
-  if (history.exclude.length > 0) {
-    parts.push(
-      `<nao_incluir>\n${history.exclude.map((item) => `- ${item}`).join('\n')}\n</nao_incluir>`,
-    );
-  }
-
-  return parts.length > 0 ? parts.join('\n\n') : null;
-}
-
-/**
- * Itens da lista "não incluir" que aparecem no texto, como palavra inteira:
- * "Java" não pode acusar "JavaScript". Sem caixa e sem acento, como as outras
- * conferências.
- */
-export function excludedMentions(written: string, exclude: string[]): string[] {
-  const text = fold(written);
-
-  return exclude.filter((item) => {
-    const needle = fold(item).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-    return new RegExp(`(^|[^a-z0-9])${needle}($|[^a-z0-9])`).test(text);
-  });
-}
-
-/**
  * Da proposta do modelo para o currículo que a tela revisa.
  *
  * O que é estrutura vem sempre do original: o modelo não tem como mudar
@@ -148,7 +110,7 @@ export function finalizeTailored(
   resumeText: string,
   history: CareerHistory = emptyCareerHistory,
 ): TailoredResume {
-  const source = [resumeText, history.notes ?? ''].join('\n');
+  const source = [resumeText, historyText(history)].join('\n');
   const trusted = fold(source);
 
   const summary = limit(clean(output.summary)) ?? original.summary;

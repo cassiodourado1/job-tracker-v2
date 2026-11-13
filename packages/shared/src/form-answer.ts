@@ -80,6 +80,12 @@ export const answerDraftSchema = z.object({
   unverifiedNumbers: z.array(z.string()),
   /** Expressões com cara de texto de IA que sobraram no rascunho. */
   aiTells: z.array(z.string()),
+  /**
+   * Itens da sua lista "não incluir" (histórico profissional) que apareceram
+   * na resposta. Conferido pelo servidor. Com padrão, para a resposta valer
+   * em quem não tem histórico.
+   */
+  excludedMentions: z.array(z.string()).default([]),
   /** Limite pedido e se o rascunho passou dele. */
   maxChars: z.number().int().nullable(),
   overLimit: z.boolean(),

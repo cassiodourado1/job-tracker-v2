@@ -62,8 +62,14 @@ export const interviewPrepSchema = z.object({
   toStudy: z.array(z.object({ topic: z.string(), reason: z.string() })),
   /** Perguntas para você fazer, a partir do que a vaga diz (ou não diz). */
   questionsToAsk: z.array(z.string()),
-  /** Números nos pontos de resposta que não estão no currículo. */
+  /** Números nos pontos de resposta que não estão no currículo nem no histórico. */
   unverifiedNumbers: z.array(z.string()),
+  /**
+   * Itens da sua lista "não incluir" que apareceram nos pontos de resposta:
+   * o que você pediu para não mostrar não deveria sair na entrevista. Com
+   * padrão, para as preparações já salvas continuarem válidas.
+   */
+  excludedMentions: z.array(z.string()).default([]),
 });
 
 export type InterviewPrep = z.infer<typeof interviewPrepSchema>;

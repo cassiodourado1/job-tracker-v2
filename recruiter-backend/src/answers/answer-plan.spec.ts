@@ -239,3 +239,65 @@ describe('answerPrompt', () => {
     }
   });
 });
+
+/** Histórico SINTÉTICO: verdade que ficou fora do currículo. */
+const HISTORICO = {
+  notes:
+    'Na Empresa Alfa também montei a fila de conciliação com BullMQ, processando 37 mil eventos por dia.',
+  exclude: ['Empresa Beta', 'Java'],
+};
+
+describe('finalize com histórico', () => {
+  it('o histórico prova a afirmação, como o currículo', () => {
+    const resultado = finalize(
+      saida({
+        draft:
+          'Montei a fila de conciliação com BullMQ, com 37 mil eventos por dia.',
+        facts: [
+          {
+            claim: 'Montou a fila de conciliação',
+            source: 'histórico',
+            quote: 'montei a fila de conciliação com BullMQ',
+          },
+        ],
+      }),
+      { ...contexto, history: HISTORICO },
+    );
+
+    expect(resultado.facts[0].grounded).toBe(true);
+    expect(resultado.unverifiedNumbers).toEqual([]);
+  });
+
+  it('sem o histórico, o mesmo texto vira alerta', () => {
+    const resultado = finalize(
+      saida({
+        draft:
+          'Montei a fila de conciliação com BullMQ, com 37 mil eventos por dia.',
+        facts: [
+          {
+            claim: 'Montou a fila de conciliação',
+            source: 'histórico',
+            quote: 'montei a fila de conciliação com BullMQ',
+          },
+        ],
+      }),
+      contexto,
+    );
+
+    expect(resultado.facts[0].grounded).toBe(false);
+    expect(resultado.unverifiedNumbers).toEqual(['37']);
+  });
+
+  it('aponta item da lista "não incluir" que a resposta citou', () => {
+    const resultado = finalize(
+      saida({ draft: 'Antes, na empresa beta, migrei a API para NestJS.' }),
+      { ...contexto, history: HISTORICO },
+    );
+
+    expect(resultado.excludedMentions).toEqual(['Empresa Beta']);
+  });
+
+  it('sem histórico, a lista vem vazia', () => {
+    expect(finalize(saida(), contexto).excludedMentions).toEqual([]);
+  });
+});

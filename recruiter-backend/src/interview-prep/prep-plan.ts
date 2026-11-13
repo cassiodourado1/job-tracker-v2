@@ -1,6 +1,11 @@
 import { z } from 'zod';
-import type { InterviewPrep } from '@recruit/shared';
-import { fold, grounded, unverifiedNumbers } from '../answers/answer-plan';
+import type { CareerHistory, InterviewPrep } from '@recruit/shared';
+import {
+  excludedMentions,
+  fold,
+  grounded,
+  unverifiedNumbers,
+} from '../answers/answer-plan';
 import { jobText, type FitJob } from '../job-fit/fit-plan';
 
 /**
@@ -17,12 +22,14 @@ import { jobText, type FitJob } from '../job-fit/fit-plan';
 export const PREP_SYSTEM = [
   'Você prepara uma pessoa para a entrevista de uma vaga de emprego, a partir do currículo dela (em <curriculo>) e da vaga (em <vaga>). Às vezes ela conta como é a etapa (em <etapa>).',
   '',
+  'Às vezes ela também traz o histórico profissional (em <historico>): fatos verdadeiros da trajetória que não couberam no currículo. Valem como o currículo, e costumam ser os melhores exemplos para a entrevista, porque têm o detalhe técnico que o currículo corta. Um fato do histórico continua na empresa onde aconteceu. A lista <nao_incluir> traz coisas verdadeiras que a pessoa NÃO quer mostrar: não as sugira nos pontos de resposta.',
+  '',
   '- `questions`: de 6 a 10 perguntas que esta entrevista provavelmente faz, das mais prováveis para as menos. `category`: "tecnica" (conhecimento da stack e de conceitos), "experiencia" (o que ela já fez), "comportamental" (conflito, prazo, decisão) ou "empresa" (motivação, a vaga, o produto). Se a <etapa> diz o tipo da entrevista, concentre as perguntas nele. Em `why`, diga o que na vaga torna a pergunta provável.',
-  '- `answerPoints`: de 2 a 4 pontos para a pessoa usar na resposta, cada um vindo do <curriculo> ou da <etapa>. Em `quote`, copie LITERALMENTE um trecho curto que sustenta o ponto (poucas palavras, exatamente como estão lá). Se o currículo não tem nada para a pergunta, o único ponto é como responder com honestidade, e `quote` fica vazio.',
+  '- `answerPoints`: de 2 a 4 pontos para a pessoa usar na resposta, cada um vindo do <curriculo>, do <historico> ou da <etapa>. Em `quote`, copie LITERALMENTE um trecho curto que sustenta o ponto (poucas palavras, exatamente como estão lá). Se o currículo não tem nada para a pergunta, o único ponto é como responder com honestidade, e `quote` fica vazio.',
   '- `toStudy`: o que a vaga pede e o currículo não mostra, com o motivo. É o que revisar antes, do mais importante para o menos.',
   '- `questionsToAsk`: de 3 a 5 perguntas para a pessoa fazer à empresa, sobre o que a vaga deixa em aberto (time, processo, expectativa do cargo). Nada que a vaga já responda.',
   '',
-  'Nunca afirme nos pontos de resposta algo que não está no <curriculo> ou na <etapa>: nenhuma empresa, projeto, número, tecnologia ou resultado a mais. Semelhança não é equivalência: Vue não é React, mas pode ser citado como experiência parecida.',
+  'Nunca afirme nos pontos de resposta algo que não está no <curriculo>, no <historico> ou na <etapa>: nenhuma empresa, projeto, número, tecnologia ou resultado a mais. Semelhança não é equivalência: Vue não é React, mas pode ser citado como experiência parecida.',
   '',
   'Escreva em português, direto, sem elogio vazio e sem travessão (—).',
   '',
@@ -70,8 +77,11 @@ export function finalizePrep(
   output: ModelPrep,
   resumeText: string,
   context: string | null,
+  history?: CareerHistory,
 ): InterviewPrep {
-  const trusted = fold(`${resumeText}\n${context ?? ''}`);
+  const trusted = fold(
+    `${resumeText}\n${context ?? ''}\n${history?.notes ?? ''}`,
+  );
 
   const questions = output.questions.slice(0, 12).map((item) => ({
     question: item.question.trim(),
@@ -83,6 +93,11 @@ export function finalizePrep(
     })),
   }));
 
+  // O que você vai falar: é aí que número inventado e item escondido custam.
+  const spoken = questions
+    .flatMap((item) => item.answerPoints.map((answer) => answer.point))
+    .join('\n');
+
   return {
     questions,
     toStudy: output.toStudy.slice(0, 8).map((item) => ({
@@ -93,11 +108,7 @@ export function finalizePrep(
       .map((question) => question.trim())
       .filter(Boolean)
       .slice(0, 6),
-    unverifiedNumbers: unverifiedNumbers(
-      questions
-        .flatMap((item) => item.answerPoints.map((answer) => answer.point))
-        .join('\n'),
-      trusted,
-    ),
+    unverifiedNumbers: unverifiedNumbers(spoken, trusted),
+    excludedMentions: excludedMentions(spoken, history?.exclude ?? []),
   };
 }

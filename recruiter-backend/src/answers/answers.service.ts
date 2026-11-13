@@ -19,7 +19,16 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { resumeSchema } from '@recruit/shared';
-import type { AnswerDraft, AnswerLanguage, AnswerMode } from '@recruit/shared';
+import type {
+  AnswerDraft,
+  AnswerLanguage,
+  AnswerMode,
+  CareerHistory,
+} from '@recruit/shared';
+import {
+  historySystemBlocks,
+  loadCareerHistory,
+} from '../career-history/history-context';
 import type { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -88,9 +97,10 @@ export class AnswersService {
       });
     }
 
-    const [resumeText, job] = await Promise.all([
+    const [resumeText, job, history] = await Promise.all([
       this.resumeOf(input.profileId),
       this.jobContext(input),
+      loadCareerHistory(this.prisma, input.profileId),
     ]);
 
     this.assertWithinRateLimit();
@@ -100,7 +110,14 @@ export class AnswersService {
     let message: Awaited<ReturnType<typeof this.ask>>;
 
     try {
-      message = await this.ask(resumeText, job, input, notes, maxChars);
+      message = await this.ask(
+        resumeText,
+        history,
+        job,
+        input,
+        notes,
+        maxChars,
+      );
     } catch (error) {
       this.failFromAnthropic(error);
     }
@@ -141,6 +158,7 @@ export class AnswersService {
       notes,
       question: input.question,
       jobText: job.text,
+      history,
     });
   }
 
@@ -158,6 +176,7 @@ export class AnswersService {
    */
   private ask(
     resumeText: string,
+    history: CareerHistory,
     job: JobContext,
     input: DraftRequest,
     notes: string | null,
@@ -180,6 +199,7 @@ export class AnswersService {
           text: `<curriculo>\n${resumeText}\n</curriculo>`,
           cache_control: { type: 'ephemeral' },
         },
+        ...historySystemBlocks(history),
       ],
       messages: [
         {

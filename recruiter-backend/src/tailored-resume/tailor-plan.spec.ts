@@ -1,8 +1,8 @@
 import type { Resume } from '@recruit/shared';
 import { renderResume } from '../answers/answer-plan';
+import { historyBlock } from '../career-history/history-context';
 import {
   finalizeTailored,
-  historyBlock,
   orderSkills,
   tailorPrompt,
   type ModelTailor,

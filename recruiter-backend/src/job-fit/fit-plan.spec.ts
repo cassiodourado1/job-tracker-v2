@@ -82,3 +82,28 @@ describe('finalizeFit', () => {
     });
   });
 });
+
+describe('finalizeFit com histórico', () => {
+  const saida = {
+    verdict: 'boa' as const,
+    summary: 'Combina.',
+    strengths: [
+      { requirement: 'Testes', evidence: 'testes com Testing Library' },
+    ],
+    gaps: [],
+  };
+
+  it('a prova pode vir do histórico', () => {
+    const fit = finalizeFit(saida, CURRICULO, {
+      notes:
+        'Na Empresa Antiga também escrevi testes com Testing Library nos dashboards.',
+      exclude: [],
+    });
+
+    expect(fit.strengths[0].verified).toBe(true);
+  });
+
+  it('sem histórico, a mesma prova fica marcada para conferir', () => {
+    expect(finalizeFit(saida, CURRICULO).strengths[0].verified).toBe(false);
+  });
+});

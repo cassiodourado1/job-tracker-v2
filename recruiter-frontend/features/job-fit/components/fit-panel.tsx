@@ -91,7 +91,7 @@ export function FitPanel({
                     {!item.verified && (
                       <span
                         className="ml-1.5 rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                        title="O trecho citado não foi encontrado no seu currículo. Confira antes de usar este ponto."
+                        title="O trecho citado não foi encontrado no seu currículo nem no histórico. Confira antes de usar este ponto."
                       >
                         confira
                       </span>
