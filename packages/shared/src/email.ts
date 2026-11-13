@@ -215,6 +215,7 @@ export const emailStatusVerdictSchema = z.enum([
   'teste',
   'oferta',
   'rejeitado',
+  'cancelado',
 ]);
 
 export type EmailStatusVerdict = z.infer<typeof emailStatusVerdictSchema>;

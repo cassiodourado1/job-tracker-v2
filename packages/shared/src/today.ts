@@ -27,6 +27,7 @@ export const FOLLOW_UP_DAYS: Record<ApplicationStatus, number | null> = {
   teste: 5,
   oferta: 2,
   rejeitado: null,
+  cancelado: null,
 };
 
 /** "Adiar" empurra o lembrete por este tanto, qualquer que seja o status. */

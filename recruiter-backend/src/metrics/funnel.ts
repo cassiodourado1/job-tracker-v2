@@ -63,7 +63,8 @@ export function buildFunnel(
  * `rejeitado` e `rascunho` não são degraus: o primeiro acontece a partir de
  * QUALQUER etapa — incluí-lo faria uma candidatura rejeitada na triagem contar
  * como se tivesse chegado à oferta, porque `rejeitado` vem depois no enum — e
- * o segundo é anterior ao funil.
+ * o segundo é anterior ao funil. `cancelado` fica fora pelo mesmo motivo que
+ * `rejeitado`: o degrau que conta é o último alcançado antes de a vaga sumir.
  */
 function deepestStage(application: ApplicationFacts): number {
   const marks = [...application.reached, application.status];

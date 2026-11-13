@@ -1,4 +1,4 @@
-import { APPLICATION_STATUSES } from '@recruit/shared';
+import { APPLICATION_STATUSES, isClosedStatus } from '@recruit/shared';
 import type { ApplicationStatus } from '@recruit/shared';
 
 /**
@@ -30,6 +30,7 @@ const RESPONSE: ReadonlySet<ApplicationStatus> = new Set([
   'teste',
   'oferta',
   'rejeitado',
+  'cancelado',
 ]);
 
 export function isActionable(facts: SuggestionFacts): boolean {
@@ -38,7 +39,7 @@ export function isActionable(facts: SuggestionFacts): boolean {
   }
 
   // Encerrada. Reabrir um processo é raro o bastante para ser à mão.
-  if (facts.current === 'rejeitado') {
+  if (isClosedStatus(facts.current)) {
     return false;
   }
 
@@ -58,10 +59,10 @@ export function isActionable(facts: SuggestionFacts): boolean {
     return false;
   }
 
-  // Um email antigo não puxa a candidatura para trás no funil. Rejeição é a
-  // exceção: ela encerra a partir de qualquer etapa.
+  // Um email antigo não puxa a candidatura para trás no funil. Rejeição e
+  // cancelamento são a exceção: encerram a partir de qualquer etapa.
   if (
-    facts.suggested !== 'rejeitado' &&
+    !isClosedStatus(facts.suggested) &&
     depth(facts.suggested) <= depth(facts.current)
   ) {
     return false;

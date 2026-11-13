@@ -126,6 +126,17 @@ describe('buildFunnel', () => {
     expect(etapa(funil, 'oferta').reached).toBe(0);
   });
 
+  it('cancelado não conta como profundidade', () => {
+    // Mesmo risco do rejeitado, maior ainda: `cancelado` é o último do enum.
+    const funil = buildFunnel(
+      [cand('app-1', ['aplicado', 'teste', 'cancelado'])],
+      COM_TAXAS,
+    );
+
+    expect(etapa(funil, 'teste').reached).toBe(1);
+    expect(etapa(funil, 'oferta').reached).toBe(0);
+  });
+
   it('rascunho não é degrau do funil', () => {
     const funil = buildFunnel([cand('app-1', ['rascunho'])], COM_TAXAS);
 

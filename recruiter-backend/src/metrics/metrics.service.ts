@@ -78,6 +78,7 @@ export class MetricsService {
     return {
       funnel: buildFunnel(facts, MIN_FOR_RATES),
       rejected: rows.filter((row) => row.status === 'rejeitado').length,
+      cancelled: rows.filter((row) => row.status === 'cancelado').length,
       drafts: rows.filter((row) => row.status === 'rascunho').length,
       active: rows.length,
       answered: facts.filter(answered).length,
