@@ -1,7 +1,9 @@
 #!/bin/bash
 # Agenda o agente diário no macOS (launchd), no horário escolhido.
 #
-# Uso: scripts/instalar-agente-diario.sh [HORA] [TOP]   (padrão: 9 e 5)
+# Uso: scripts/instalar-agente-diario.sh [HORA] [META] [TETO]   (padrão: 9, 5 e 60)
+#   META: quantas vagas forte ou boa encontrar por dia.
+#   TETO: máximo de análises pagas por dia, para o crédito não zerar.
 #      scripts/instalar-agente-diario.sh --remover
 #
 # Se o Mac estiver dormindo no horário, o launchd roda o agente quando ele
@@ -21,8 +23,10 @@ fi
 
 HOUR="${1:-9}"
 TOP="${2:-5}"
+TETO="${3:-60}"
 case "$HOUR" in ''|*[!0-9]*) echo "Hora inválida: $HOUR"; exit 1;; esac
-case "$TOP" in ''|*[!0-9]*) echo "Top inválido: $TOP"; exit 1;; esac
+case "$TOP" in ''|*[!0-9]*) echo "Meta inválida: $TOP"; exit 1;; esac
+case "$TETO" in ''|*[!0-9]*) echo "Teto inválido: $TETO"; exit 1;; esac
 
 NODE="$(command -v node)"
 # O launchd não carrega o PATH do seu shell: sem isto, npm e node somem.
@@ -40,6 +44,7 @@ cat > "$PLIST" <<EOF
     <string>$NODE</string>
     <string>$ROOT/scripts/agente-diario.mjs</string>
     <string>--top</string><string>$TOP</string>
+    <string>--teto</string><string>$TETO</string>
   </array>
   <key>WorkingDirectory</key><string>$ROOT</string>
   <key>EnvironmentVariables</key>
@@ -54,5 +59,5 @@ EOF
 
 launchctl bootout "gui/$(id -u)" "$PLIST" 2>/dev/null || true
 launchctl bootstrap "gui/$(id -u)" "$PLIST"
-echo "Agente agendado para as ${HOUR}h, analisando as $TOP melhores vagas."
-echo "Relatórios em ~/agente-vagas. Para remover: $0 --remover"
+echo "Agente agendado para as ${HOUR}h: procura $TOP vagas forte ou boa, com no máximo $TETO análises."
+echo "O resultado aparece em Minhas vagas, Seleção do agente. Para remover: $0 --remover"
