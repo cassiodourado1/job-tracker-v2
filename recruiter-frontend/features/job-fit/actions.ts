@@ -1,10 +1,10 @@
 "use server";
 
-import type { JobFit } from "@recruit/shared";
+import type { StoredJobFit } from "@recruit/shared";
 import { analyzeJobFit } from "@/features/job-fit/api";
 
 export type JobFitState =
-  | { status: "ok"; fit: JobFit }
+  | { status: "ok"; fit: StoredJobFit }
   | { status: "error"; message: string };
 
 export async function analyzeJobFitAction(
