@@ -65,10 +65,20 @@ const JOB = {
   description: 'Liderar o front-end.',
 };
 
-function prisma(resume: unknown = RESUME, job: unknown = JOB): PrismaService {
+const ANALYZED_AT = new Date('2026-11-19T12:00:00.000Z');
+const upsert = jest.fn((args: { create: { origin: string } }) =>
+  Promise.resolve({ analyzedAt: ANALYZED_AT, origin: args.create.origin }),
+);
+
+function prisma(
+  resume: unknown = RESUME,
+  job: unknown = JOB,
+  stored: unknown = null,
+): PrismaService {
   return {
     profile: { findUnique: () => Promise.resolve({ resume }) },
     job: { findUnique: () => Promise.resolve(job) },
+    jobFitAnalysis: { upsert, findUnique: () => Promise.resolve(stored) },
   } as unknown as PrismaService;
 }
 
@@ -91,7 +101,10 @@ const RESPOSTA = {
 };
 
 describe('JobFitService', () => {
-  beforeEach(() => parse.mockReset());
+  beforeEach(() => {
+    parse.mockReset();
+    upsert.mockClear();
+  });
 
   it('manda currículo e vaga, com cache e fallback, e confere o trecho', async () => {
     parse.mockResolvedValue(RESPOSTA);
@@ -113,6 +126,64 @@ describe('JobFitService', () => {
     expect(JSON.stringify(request.messages)).toContain('<vaga>');
     expect(fit.verdict).toBe('boa');
     expect(fit.strengths[0].verified).toBe(true);
+  });
+
+  it('guarda a análise conferida, com quem pediu, para não pagar de novo', async () => {
+    parse.mockResolvedValue(RESPOSTA);
+
+    const fit = await new JobFitService(prisma(), config('chave')).analyze(
+      'perfil',
+      'vaga',
+      'agente',
+    );
+
+    const [[args]] = upsert.mock.calls as unknown as [
+      [{ where: unknown; create: Record<string, unknown> }],
+    ];
+
+    expect(args.where).toEqual({
+      profileId_jobId: { profileId: 'perfil', jobId: 'vaga' },
+    });
+    expect(args.create).toMatchObject({ verdict: 'boa', origin: 'agente' });
+    // O que fica guardado é a versão já conferida pelo servidor, não a crua.
+    expect(args.create.content).toMatchObject({
+      strengths: [{ verified: true }],
+    });
+    expect(fit).toMatchObject({
+      origin: 'agente',
+      analyzedAt: ANALYZED_AT.toISOString(),
+    });
+  });
+
+  it('análise guardada volta sem chamar o modelo', async () => {
+    const stored = {
+      content: { ...RESPOSTA.parsed_output, strengths: [] },
+      analyzedAt: ANALYZED_AT,
+      origin: 'tela',
+    };
+
+    const fit = await new JobFitService(
+      prisma(RESUME, JOB, stored),
+      config('chave'),
+    ).latest('perfil', 'vaga');
+
+    expect(fit).toMatchObject({ verdict: 'boa', origin: 'tela' });
+    expect(parse).not.toHaveBeenCalled();
+  });
+
+  it('análise guardada fora do formato atual conta como ausente', async () => {
+    const stored = {
+      content: { verdict: 'boa' },
+      analyzedAt: ANALYZED_AT,
+      origin: 'tela',
+    };
+
+    await expect(
+      new JobFitService(prisma(RESUME, JOB, stored), config('chave')).latest(
+        'perfil',
+        'vaga',
+      ),
+    ).resolves.toBeNull();
   });
 
   it('sem chave, diz o que configurar e não chama nada', async () => {

@@ -9,9 +9,15 @@ import { z } from 'zod';
  * que já interessou, com o currículo inteiro no contexto (funcionalidade 4).
  */
 
+/** Quem pediu a análise: o agente diário ou você, na tela. */
+export const fitOriginSchema = z.enum(['agente', 'tela']);
+export type FitOrigin = z.infer<typeof fitOriginSchema>;
+
 export const jobFitRequestSchema = z.strictObject({
   profileId: z.string().min(1),
   jobId: z.string().min(1),
+  /** Sem origem é a tela: o agente é o único que se identifica. */
+  origin: fitOriginSchema.default('tela'),
 });
 
 export type JobFitRequest = z.infer<typeof jobFitRequestSchema>;
@@ -50,3 +56,14 @@ export const jobFitSchema = z.object({
 });
 
 export type JobFit = z.infer<typeof jobFitSchema>;
+
+/**
+ * A análise guardada: a mesma, mais quando e quem pediu. É o que a página da
+ * vaga mostra ao abrir, sem pagar de novo.
+ */
+export const storedJobFitSchema = jobFitSchema.extend({
+  analyzedAt: z.iso.datetime(),
+  origin: fitOriginSchema,
+});
+
+export type StoredJobFit = z.infer<typeof storedJobFitSchema>;

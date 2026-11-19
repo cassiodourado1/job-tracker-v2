@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { fitOriginSchema, fitVerdictSchema } from './job-fit';
 
 /** Modalidade de trabalho da vaga. Espelha o enum WorkModel do Prisma. */
 export const workModelSchema = z.enum(['remoto', 'hibrido', 'presencial']);
@@ -93,6 +94,20 @@ export const savedJobSchema = z.object({
   application: z
     .object({ id: z.string(), status: z.string() })
     .nullable(),
+  /**
+   * O resumo da última análise de aderência, para o card decidir sem abrir a
+   * vaga. Os detalhes (o que falta, como contornar) ficam na página da vaga.
+   */
+  fit: z
+    .object({
+      verdict: fitVerdictSchema,
+      summary: z.string(),
+      analyzedAt: z.iso.datetime(),
+      origin: fitOriginSchema,
+    })
+    .nullable(),
+  /** Existe currículo adaptado salvo para esta vaga. */
+  tailored: z.boolean(),
 });
 
 export type SavedJob = z.infer<typeof savedJobSchema>;
