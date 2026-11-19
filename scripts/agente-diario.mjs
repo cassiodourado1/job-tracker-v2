@@ -64,8 +64,8 @@ if (!/^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(API)) {
 if (!Number.isInteger(TOP) || TOP < 0 || TOP > 50) {
   throw new Error('--top precisa ser um inteiro entre 0 e 50.');
 }
-if (!Number.isInteger(MAX_ANALYSES) || MAX_ANALYSES < 1 || MAX_ANALYSES > 150) {
-  throw new Error('--teto precisa ser um inteiro entre 1 e 150.');
+if (!Number.isInteger(MAX_ANALYSES) || MAX_ANALYSES < 1 || MAX_ANALYSES > 500) {
+  throw new Error('--teto precisa ser um inteiro entre 1 e 500.');
 }
 
 /**
