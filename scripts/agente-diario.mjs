@@ -12,8 +12,12 @@
  *   vaga (também pago). Ele aparece na página da vaga no app, pronto para
  *   revisar e imprimir em PDF, e é o que fica registrado quando você
  *   registrar a candidatura;
- * - junta o que a tela Hoje pede de ação (emails, follow-ups);
- * - grava um relatório em ~/agente-vagas/AAAA-MM-DD.md e notifica.
+ * - avisa por notificação quantas vagas analisou e quantos emails pedem ação.
+ *
+ * O resultado fica DENTRO do app, não num arquivo: cada análise é guardada
+ * com origem "agente", e Minhas vagas mostra a "Seleção do agente" com o
+ * veredito, o resumo e o currículo adaptado, até você marcar "Já me
+ * candidatei". Em ~/agente-vagas ficam só o log e o estado do agente.
  *
  * O que ele NUNCA faz: candidatar, enviar formulário, descartar vaga ou mudar
  * status de candidatura. O §5 proíbe envio automático, e o agente só prepara
@@ -24,8 +28,7 @@
  * quando você a inicia à mão.
  *
  * Uso: node scripts/agente-diario.mjs [--top 5] [--sem-analise] [--sem-curriculo] [--sem-aviso]
- * Variáveis: AGENTE_API (padrão http://127.0.0.1:3333), AGENTE_WEB (padrão
- * http://127.0.0.1:3000, só para os links do relatório), AGENTE_PERFIL (id do
+ * Variáveis: AGENTE_API (padrão http://127.0.0.1:3333), AGENTE_PERFIL (id do
  * perfil; padrão o perfil marcado como padrão), AGENTE_DIR (padrão
  * ~/agente-vagas).
  */
@@ -37,7 +40,6 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const API = process.env.AGENTE_API ?? 'http://127.0.0.1:3333';
-const WEB = process.env.AGENTE_WEB ?? 'http://127.0.0.1:3000';
 const DIR = process.env.AGENTE_DIR ?? join(homedir(), 'agente-vagas');
 const args = process.argv.slice(2);
 const TOP = Number(valueOf('--top') ?? 5);
@@ -163,7 +165,7 @@ function notify(message) {
         '-e',
         'end run',
         message,
-        'Relatório em ~/agente-vagas',
+        'Veja em Minhas vagas, Seleção do agente',
       ],
       () => done(),
     ),
@@ -213,7 +215,8 @@ async function main() {
         });
         const fit = await api('/job-fit', {
           method: 'POST',
-          body: JSON.stringify({ profileId: profile.id, jobId: saved.jobId }),
+          // A origem é o que põe a vaga na "Seleção do agente" do app.
+          body: JSON.stringify({ profileId: profile.id, jobId: saved.jobId, origin: 'agente' }),
           timeoutMs: 180_000,
         });
         const entry = { job, fit, jobId: saved.jobId };
@@ -270,57 +273,13 @@ async function main() {
     );
 
     const good = analyses.filter((a) => ['forte', 'boa'].includes(a.fit?.verdict));
-    const lines = [
-      `# Agente diário: ${today}`,
-      '',
-      `Descoberta: ${discover.total} vagas no filtro, ${fresh.length} ainda não analisadas pelo agente.`,
-      discover.failedSources.length
-        ? `Fontes que falharam nesta rodada: ${discover.failedSources.join(', ')}. A lista pode estar incompleta.`
-        : 'Todas as fontes responderam.',
-      '',
-      ANALYZE ? `## Análise das melhores (${picked.length} tentadas)` : `## As ${picked.length} melhores (sem análise)`,
-      '',
-    ];
-
-    for (const job of picked) {
-      const analysis = analyses.find((a) => a.job === job);
-      lines.push(`### ${plain(job.title, 120)} · ${plain(job.company, 80)}`);
-      lines.push(`${job.url} (fonte: ${plain(job.source, 40)})`);
-      if (analysis?.fit) {
-        lines.push(`**Aderência: ${analysis.fit.verdict}.** ${plain(analysis.fit.summary, 600)}`);
-        lines.push('');
-        lines.push(`- Página da vaga no app (análise e currículo): ${WEB}/vagas/${analysis.jobId}`);
-        if (analysis.tailored) {
-          lines.push(
-            `- Currículo adaptado pronto: revise e imprima em PDF em ${WEB}/vagas/${analysis.jobId}/curriculo`,
-          );
-        } else if (analysis.tailorError) {
-          lines.push(`- Currículo adaptado falhou (${plain(analysis.tailorError, 160)}); adapte na página da vaga.`);
-        }
-      } else if (analysis?.skipped) {
-        lines.push(`Pulada, não volta nos próximos dias: ${plain(analysis.error, 200)}`);
-      } else if (analysis?.error) {
-        lines.push(`Análise falhou, tenta de novo amanhã: ${plain(analysis.error, 200)}`);
-      }
-      lines.push('');
+    if (discover.failedSources.length) {
+      await log(`Fontes que falharam nesta rodada: ${discover.failedSources.join(', ')}.`);
     }
-
-    lines.push('## Hoje no app', '');
-    lines.push(`- Emails que podem exigir ação: ${todayView.emailActions.length}`);
-    lines.push(`- Follow-ups vencidos: ${todayView.followUps.length}`);
-    lines.push(`- Sugestões de status esperando você: ${todayView.pendingSuggestions}`);
-    lines.push(
-      `- Emails: ${todayView.emailSync.freshness === 'em-dia' ? 'sincronizados' : 'não estão em dia, sincronize no app'}`,
-    );
-    lines.push(
-      '',
-      'Nada foi enviado. Para candidatar: abra o currículo adaptado, revise e salve em PDF; em Minhas vagas, use Preencher no card da vaga para abrir o formulário da empresa, anexe o PDF, revise e envie você mesmo.',
-    );
-
-    const report = join(DIR, `${today}.md`);
-    await writeFile(report, `${lines.join('\n')}\n`);
     await writeFile(join(DIR, 'estado.json'), JSON.stringify(state, null, 2));
-    await log(`Relatório: ${report}`);
+    await log(
+      `Fim: ${analyses.filter((a) => a.fit).length} analisadas, ${good.length} boas ou fortes, ${analyses.filter((a) => a.tailored).length} currículos adaptados.`,
+    );
 
     if (NOTIFY) {
       await notify(
