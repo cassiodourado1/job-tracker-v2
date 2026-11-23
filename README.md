@@ -13,7 +13,7 @@ As integrações com Gmail e Claude são opcionais.
 > Publicar o código no GitHub não exige expor o aplicativo na internet.
 > A aplicação não está preparada para hospedagem pública ou uso compartilhado.
 
-![Painel do mercado de vagas](docs/images/mercado.png)
+![Painel do mercado de vagas](docs/images/mercado.webp)
 
 [Instalação](#instalação) · [Funcionalidades](#funcionalidades) ·
 [Arquitetura](#arquitetura) · [Guia de uso](docs/guia-de-uso.md)
@@ -53,7 +53,15 @@ A disponibilidade e a quantidade de resultados dependem de cada fonte e dos
 filtros. A ordem de relevância da busca é calculada por código; a análise por
 Claude compara uma vaga específica com seu currículo e histórico profissional.
 
-Veja [cada tela e seus comandos](docs/guia-de-uso.md#o-menu-tela-por-tela).
+### Telas
+
+| | |
+| --- | --- |
+| ![Seleção do agente](docs/images/selecao-do-agente.webp) **Seleção do agente**: vagas analisadas, com veredito, resumo e currículo adaptado | ![Aderência ao currículo](docs/images/aderencia.webp) **Aderência**: o que você já mostra, o que falta e como contornar |
+| ![Currículo adaptado e preparação para entrevista](docs/images/curriculo-e-entrevista.webp) **Currículo adaptado e preparação para entrevista** | ![Hoje](docs/images/hoje.webp) **Hoje**: convites, testes e pendências com prazo, e follow-ups |
+| ![Filtros da busca](docs/images/busca-filtros.webp) **Busca**: termos, empresas acompanhadas e filtros de título | ![Mercado](docs/images/mercado.webp) **Mercado**: vagas por fonte, dia, empresa e tecnologia |
+
+As telas usam um perfil com dados demonstrativos. Veja [cada tela e seus comandos](docs/guia-de-uso.md#o-menu-tela-por-tela).
 
 ## Instalação
 

@@ -24,3 +24,6 @@ storageState.json
 *.log
 npm-debug.log*
 .DS_Store
+
+# Material de divulgação gerado localmente (PNGs originais e vídeo)
+docs/demo-linkedin/
