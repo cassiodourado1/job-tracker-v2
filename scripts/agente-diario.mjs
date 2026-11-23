@@ -33,6 +33,7 @@
  * ~/agente-vagas).
  */
 import { spawn, execFile } from 'node:child_process';
+import { openSync } from 'node:fs';
 import { mkdir, readFile, writeFile, appendFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -150,9 +151,13 @@ async function ensureApi() {
   await run('npm', ['run', 'build:shared']);
   await run('npm', ['run', 'build', '-w', 'recruiter-backend']);
 
-  const child = spawn('node', ['recruiter-backend/dist/main.js'], {
-    cwd: ROOT,
-    stdio: 'ignore',
+  // A API lê o .env da pasta em que sobe: da raiz ela não acha o
+  // DATABASE_URL e morre na validação, e foi assim que o agente das 9h falhou
+  // em 22 e 23/11. A saída vai para um log, para a próxima falha dizer o motivo.
+  const output = openSync(join(DIR, 'api.log'), 'a');
+  const child = spawn('node', ['dist/main.js'], {
+    cwd: join(ROOT, 'recruiter-backend'),
+    stdio: ['ignore', output, output],
   });
 
   for (let i = 0; i < 60; i += 1) {
@@ -160,7 +165,7 @@ async function ensureApi() {
     await new Promise((done) => setTimeout(done, 2_000));
   }
   child.kill();
-  throw new Error('A API não respondeu em 2 minutos.');
+  throw new Error(`A API não respondeu em 2 minutos. Veja ${join(DIR, 'api.log')}.`);
 }
 
 function run(command, commandArgs) {
