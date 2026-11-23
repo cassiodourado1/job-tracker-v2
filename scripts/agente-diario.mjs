@@ -8,8 +8,8 @@
  *   antigas, e corta de graça, pelo título, o que é de outra trilha;
  * - salva e analisa uma a uma (paga: é o Claude com o currículo inteiro) até
  *   achar N vagas forte ou boa, ou bater o teto de análises do dia;
- * - para as de aderência forte ou boa, gera e salva o currículo adaptado à
- *   vaga (também pago). Ele aparece na página da vaga no app, pronto para
+ * - para as de aderência forte, boa ou parcial, gera e salva o currículo
+ *   adaptado à vaga (também pago, com teto próprio por dia). Ele aparece na página da vaga no app, pronto para
  *   revisar e imprimir em PDF, e é o que fica registrado quando você
  *   registrar a candidatura;
  * - avisa por notificação quantas vagas analisou e quantos emails pedem ação.
@@ -27,7 +27,8 @@
  * fim. Subir a API dispara a sincronização de email do boot, que é a mesma de
  * quando você a inicia à mão.
  *
- * Uso: node scripts/agente-diario.mjs [--top 5] [--sem-analise] [--sem-curriculo] [--sem-aviso]
+ * Uso: node scripts/agente-diario.mjs [--top 5] [--teto 60] [--max-curriculos 20] [--so-boas]
+ *        [--sem-analise] [--sem-curriculo] [--sem-aviso]
  * Variáveis: AGENTE_API (padrão http://127.0.0.1:3333), AGENTE_PERFIL (id do
  * perfil; padrão o perfil marcado como padrão), AGENTE_DIR (padrão
  * ~/agente-vagas).
@@ -55,8 +56,16 @@ const MAX_AGE_DAYS = 21;
 const ANALYZE = !args.includes('--sem-analise');
 const NOTIFY = !args.includes('--sem-aviso');
 const TAILOR = ANALYZE && !args.includes('--sem-curriculo');
-/** Só vale adaptar currículo para vaga em que a análise viu chance real. */
-const TAILOR_VERDICTS = ['forte', 'boa'];
+/** As vagas que contam para a meta do dia. */
+const GOOD_VERDICTS = ['forte', 'boa'];
+/**
+ * Também adapta o currículo nas parciais: parcial é "falta algo obrigatório
+ * que dá para contornar", e muita gente é chamada assim. Sem currículo
+ * adaptado, a vaga parcial ficava sem o que enviar. --so-boas volta ao antigo.
+ */
+const TAILOR_VERDICTS = args.includes('--so-boas') ? GOOD_VERDICTS : [...GOOD_VERDICTS, 'parcial'];
+/** Teto de currículos adaptados por dia (Sonnet, pago), separado do de análises. */
+const MAX_TAILORED = Number(valueOf('--max-curriculos') ?? 20);
 
 /** A API escuta só em loopback (§2); qualquer outro endereço é engano. */
 if (!/^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(API)) {
@@ -64,6 +73,9 @@ if (!/^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(API)) {
 }
 if (!Number.isInteger(TOP) || TOP < 0 || TOP > 50) {
   throw new Error('--top precisa ser um inteiro entre 0 e 50.');
+}
+if (!Number.isInteger(MAX_TAILORED) || MAX_TAILORED < 0 || MAX_TAILORED > 100) {
+  throw new Error('--max-curriculos precisa ser um inteiro entre 0 e 100.');
 }
 if (!Number.isInteger(MAX_ANALYSES) || MAX_ANALYSES < 1 || MAX_ANALYSES > 500) {
   throw new Error('--teto precisa ser um inteiro entre 1 e 500.');
@@ -258,7 +270,7 @@ async function main() {
     );
     const analyses = [];
     const picked = [];
-    const isGood = (a) => TAILOR_VERDICTS.includes(a.fit?.verdict);
+    const isGood = (a) => GOOD_VERDICTS.includes(a.fit?.verdict);
 
     for (const job of ANALYZE ? queue : queue.slice(0, TOP)) {
       if (ANALYZE) {
@@ -288,7 +300,11 @@ async function main() {
         state.analyzed[job.url] = { date: today, verdict: fit.verdict };
         await log(`Analisada: ${plain(job.company, 60)} → ${fit.verdict}`);
 
-        if (TAILOR && TAILOR_VERDICTS.includes(fit.verdict)) {
+        if (
+          TAILOR &&
+          TAILOR_VERDICTS.includes(fit.verdict) &&
+          analyses.filter((a) => a.tailored).length < MAX_TAILORED
+        ) {
           // Falha aqui não desfaz a análise: a vaga continua salva e você
           // adapta à mão na página dela.
           try {

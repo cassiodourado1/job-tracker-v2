@@ -403,7 +403,9 @@ O que ele faz, nesta ordem:
    Se o título também falar de front-end, a vaga fica.
 3. Salva e analisa a aderência de cada vaga, uma a uma, até achar a meta de
    vagas **forte** ou **boa**, ou até bater o teto de análises da execução.
-4. Para as vagas forte ou boa, gera e salva o currículo adaptado.
+4. Para as vagas forte, boa ou parcial, gera e salva o currículo adaptado,
+   até 20 por dia. Parcial é quando falta algo obrigatório que dá para
+   contornar: a vaga ainda vale a candidatura, e já fica com o currículo pronto.
 5. Avisa por notificação do Mac quantas vagas analisou e quantos emails pedem
    ação.
 
@@ -433,6 +435,8 @@ node scripts/agente-diario.mjs --top 10 --teto 60
 | --- | --- |
 | `--top N` | Meta: quantas vagas forte ou boa encontrar (até 50) |
 | `--teto N` | Máximo de tentativas de análise por execução (até 500, padrão 60) |
+| `--max-curriculos N` | Máximo de currículos adaptados no dia (até 100, padrão 20) |
+| `--so-boas` | Adapta o currículo só nas vagas forte ou boa, não nas parciais |
 | `--sem-curriculo` | Analisa, mas não gera currículo adaptado |
 | `--sem-analise` | Só lista as vagas da triagem, sem chamar o Claude |
 | `--sem-aviso` | Não mostra a notificação |
