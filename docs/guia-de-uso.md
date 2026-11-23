@@ -51,7 +51,7 @@ Cada card tem quatro botões:
 
 **Filtros** abre o modal com o que decide quais vagas chegam:
 
-![Modal de filtros com termos de busca e empresas acompanhadas](images/filtros.png)
+![Filtros da busca com termos, empresas acompanhadas e título](images/busca-filtros.webp)
 
 - **Termos de busca**: o que os portais procuram (até 6). Sem "front-end"
   aqui, vaga de front-end nem entra na lista.
@@ -76,6 +76,8 @@ de aplicadas. Os filtros do topo separam a lista:
 | **Já me candidatei** | Vagas com candidatura registrada |
 | **Todas** | Tudo o que está salvo |
 
+![Seleção do agente em Minhas vagas, com veredito, resumo e currículo adaptado](images/selecao-do-agente.webp)
+
 O card mostra a aderência e o resumo da análise, quando houver, com os links
 **Ver análise completa** e **Currículo adaptado**. Os botões:
 
@@ -93,7 +95,9 @@ quatro painéis. Na interface, cada painel chama o Claude quando você solicita.
 também pode executar análises e adaptações. O contexto inclui o currículo
 profissional e, quando preenchido, o histórico profissional.
 
-![Painéis de IA na página da vaga](images/vaga.png)
+![Aderência ao currículo: veredito, o que você já mostra e o que falta](images/aderencia.webp)
+
+![Currículo adaptado para a vaga e preparação para entrevista](images/curriculo-e-entrevista.webp)
 
 - **Aderência ao seu currículo** 🔑: o veredito (forte, boa, parcial ou
   fraca), o que você já mostra, com o trecho do currículo que prova, e o que
@@ -124,7 +128,7 @@ profissional e, quando preenchido, o histórico profissional.
 A página inicial. Responde "como está o mercado nos meus filtros?" antes de
 qualquer clique, sem IA.
 
-![Painel do Mercado](images/mercado.png)
+![Painel do Mercado](images/mercado.webp)
 
 - **Período**: últimas 24 horas, 7 dias ou 30 dias.
 - Totais: **vagas publicadas** (uma vaga em vários sites conta uma vez),
@@ -142,6 +146,8 @@ Use para decidir o que estudar (as tecnologias mais pedidas) e onde procurar
 ### Hoje
 
 O que pede ação hoje, numa tela só:
+
+![Hoje: emails que pedem ação, com prazo, e follow-ups](images/hoje.webp)
 
 - **Emails**: o estado da leitura do Gmail (última sincronização, rodada em
   andamento ou com falha) e o botão **Sincronizar agora**. Com os dados
