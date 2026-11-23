@@ -14,7 +14,8 @@ acontece depois que você se candidata.
 <p align="center">
   <a href="#o-ciclo-de-uma-vaga">Como funciona</a> ·
   <a href="#começando">Começando</a> ·
-  <a href="#telas">Telas</a> ·
+  <a href="#o-menu-tela-por-tela">Tela por tela</a> ·
+  <a href="#agente-diário">Agente diário</a> ·
   <a href="#como-funciona-por-dentro">Por dentro</a> ·
   <a href="#problemas-comuns">Problemas comuns</a>
 </p>
@@ -75,46 +76,10 @@ ele, e nenhuma sugestão vira dado sem o seu clique.
 | Aderência entre uma vaga e o seu currículo: o que você já mostra, o que falta e como contornar | sim |
 | Currículo adaptado para uma vaga, sem acrescentar nada que o currículo não tenha, salvo como a versão enviada naquela candidatura | sim |
 | Preparação para entrevista: perguntas prováveis com pontos de resposta do seu currículo, o que estudar e o que perguntar à empresa | sim |
+| Agente diário: procura vagas boas para você todo dia e deixa o resultado em *Minhas vagas* | sim |
 
 Sem a chave, tudo da primeira metade funciona. Com ela, o Claude entra só onde
 você pede, e o que ele propõe passa pelo seu clique antes de virar dado.
-
-### Telas
-
-<details open>
-<summary><b>Busca de vagas</b>: cards de todas as fontes, com contador e ordenação</summary>
-
-<br/>
-
-![Busca de vagas com cards de várias fontes](docs/images/vagas.png)
-
-Clique no nome da empresa num card para ver só as vagas dela. As abas *Buscar* e
-*Minhas vagas* ficam fixas no topo ao rolar.
-
-</details>
-
-<details>
-<summary><b>Filtros</b>: termos de busca e empresas acompanhadas</summary>
-
-<br/>
-
-![Modal de filtros com termos de busca e empresas acompanhadas](docs/images/filtros.png)
-
-A plataforma de cada empresa é reconhecida pelo endereço colado, na hora.
-
-</details>
-
-<details>
-<summary><b>Página da vaga</b>: aderência, currículo adaptado, preparação e perguntas do formulário</summary>
-
-<br/>
-
-![Painéis de IA na página da vaga](docs/images/vaga.png)
-
-Cada painel só chama o Claude no clique. Vai a parte profissional do
-currículo, sem nome nem contatos.
-
-</details>
 
 ## Requisitos
 
@@ -172,17 +137,237 @@ Abra **http://127.0.0.1:3000**.
 2. **Preencha o currículo** em *Currículo*. Dá para importar de um **PDF**
    (precisa da chave da Anthropic; veja abaixo o que é enviado) ou do arquivo
    de dados que o LinkedIn exporta (*Configurações → Privacidade dos dados →
-   Baixe seus dados*, primeira opção — o pacote menor, só com "Perfil", não
+   Baixe seus dados*, primeira opção; o pacote menor, só com "Perfil", não
    traz cargos nem formação). Nos dois casos o formulário é preenchido para
    você revisar, e nada é gravado até você salvar.
 3. **Procure vagas** em *Vagas*. Em *Filtros* ficam os **termos de busca**
-   (o que os portais procuram — sem "front-end" ali, vaga de front-end nem
+   (o que os portais procuram: sem "front-end" ali, vaga de front-end nem
    chega), o título, a modalidade, o contrato e as **empresas acompanhadas**.
    Salve as vagas que interessam e descarte o resto. A caixa *Filtrar por
    cargo ou tecnologia* restringe a busca ao texto digitado, e a tela avisa
    enquanto ela estiver em uso.
 4. **Registre candidaturas** em *Candidaturas*, ou deixe que venham dos
    emails (veja abaixo).
+
+## O menu, tela por tela
+
+O menu do topo tem sete itens. À direita fica o perfil escolhido e o botão
+**Trocar perfil**. Os itens marcados com 🔑 chamam o Claude e precisam da
+chave da Anthropic; todo o resto funciona sem ela.
+
+### Vagas
+
+Onde você encontra vagas e decide o que fazer com cada uma. Tem duas abas,
+fixas no topo ao rolar: **Buscar** e **Minhas vagas**.
+
+![Busca de vagas com cards de várias fontes](docs/images/vagas.png)
+
+**Buscar** junta numa lista só as vagas de todas as fontes: portais (Gupy,
+Remotar, Nerdin, GeekHunter, Programathor e outros), empresas acompanhadas e
+alertas do LinkedIn que chegam por email.
+
+- **Buscar** consulta as fontes de novo. O contador ao lado do título diz
+  quantas vagas passaram nos seus filtros e quantas estão na tela; mais vagas
+  chegam conforme você rola.
+- **Ampliar a área de busca** liga também as fontes lentas, que leem o portal
+  página a página. Leva alguns segundos a mais.
+- **Filtrar por cargo ou tecnologia** restringe a busca ao texto digitado. A
+  tela avisa enquanto ele estiver ativo, com um *limpar* ao lado.
+- **Ordenar**: mais recentes (o padrão: vaga nova tem menos concorrência),
+  relevância para o seu currículo, empresa ou cargo.
+- **Já tem o link de uma vaga? Extrair de um link** 🔑: cole o endereço e o
+  Claude lê a página e preenche a vaga para você revisar e salvar.
+- Clique no **nome da empresa** num card para ver só as vagas dela. Anúncios
+  repetidos da mesma vaga em sites diferentes viram um card só, com a contagem
+  de "anúncios iguais".
+
+Cada card tem quatro botões:
+
+| Botão | O que faz |
+| --- | --- |
+| **Ver** | Abre a vaga no site de origem |
+| **✕** | Descarta a vaga: ela some da busca deste perfil, com *desfazer* |
+| **Já me candidatei** | Salva a vaga e registra a candidatura como enviada, com a data de hoje |
+| **Salvar** (marcador) | Guarda a vaga em *Minhas vagas* para decidir depois |
+
+**Filtros** abre o modal com o que decide quais vagas chegam:
+
+![Modal de filtros com termos de busca e empresas acompanhadas](docs/images/filtros.png)
+
+- **Termos de busca**: o que os portais procuram (até 6). Sem "front-end"
+  aqui, vaga de front-end nem entra na lista.
+- **Empresas acompanhadas**: cole o endereço da página de vagas da empresa e
+  todas as vagas dela entram, não só as que casam com os termos. A
+  plataforma é reconhecida na hora (veja [a tabela](#empresas-acompanhadas-na-descoberta)).
+- **Título precisa conter** e **Título não pode conter**: palavras exigidas
+  ou proibidas no título da vaga.
+- **Localização** (Brasil ou internacional), **Estado**, **Modalidade**,
+  **Contrato**, **Senioridade** e **Tecnologias**.
+- **Vagas do LinkedIn**: a idade máxima dos alertas. O alerta não diz se a
+  vaga ainda aceita candidatura, então as velhas ficam de fora.
+
+**Minhas vagas** são as vagas que você salvou (ou que o
+[agente diário](#agente-diário) salvou para você). Elas continuam aqui depois
+de aplicadas. Os filtros do topo separam a lista:
+
+| Filtro | O que mostra |
+| --- | --- |
+| **Seleção do agente** | O que o agente analisou e você ainda não enviou, da melhor aderência para a pior |
+| **Para enviar** | Vagas salvas sem candidatura registrada |
+| **Já me candidatei** | Vagas com candidatura registrada |
+| **Todas** | Tudo o que está salvo |
+
+O card mostra a aderência e o resumo da análise, quando houver, com os links
+**Ver análise completa** e **Currículo adaptado**. Os botões:
+
+| Botão | O que faz |
+| --- | --- |
+| **Ver** | Abre a vaga no site da empresa |
+| **Preencher** | Abre a vaga num navegador e preenche nome, email, telefone e links. **Nunca envia**: você revisa, anexa o currículo e clica em enviar |
+| **Já me candidatei** | Registra a candidatura depois que você enviou no site. Vira **Acompanhar candidatura** |
+| **Lixeira** | Remove a vaga de *Minhas vagas* (pede confirmação) |
+
+**Página da vaga.** Clique no nome da empresa ou do cargo num card de *Minhas
+vagas* para abrir a página da vaga no app. Ela tem os detalhes da vaga, a
+barra **Já me candidatei** (ou o status da candidatura, se já existir) e
+quatro painéis. Cada painel só chama o Claude no clique, e o Claude recebe só
+a parte profissional do currículo, sem nome nem contatos.
+
+![Painéis de IA na página da vaga](docs/images/vaga.png)
+
+- **Aderência ao seu currículo** 🔑: o veredito (forte, boa, parcial ou
+  fraca), o que você já mostra, com o trecho do currículo que prova, e o que
+  falta, com como contornar. Trecho que o servidor não acha no currículo vem
+  marcado como *confira*. A análise fica guardada: ao voltar à página ela já
+  está lá, e **Analisar de novo** substitui. É a chamada mais cara do app.
+- **Currículo para esta vaga** 🔑: **Adaptar** reescreve o resumo e as
+  experiências para destacar o que a vaga pede e reordena as habilidades. Não
+  acrescenta nada: o que a vaga pede e o currículo não mostra fica listado à
+  parte. Revise e use **Salvar esta versão**; **Ver e salvar PDF** abre a
+  versão para imprimir. É essa versão que fica registrada como o currículo
+  enviado quando você marca a candidatura.
+- **Preparação para entrevista** 🔑: conte como é a etapa (opcional, ex.:
+  "técnica com o tech lead") e clique em **Preparar**. Vêm as perguntas
+  prováveis com pontos de resposta tirados do seu currículo, o que estudar
+  antes e o que perguntar à empresa. Fica guardada para você reler no dia.
+- **Perguntas do formulário** 🔑: cole uma pergunta aberta da candidatura
+  ("Por que você quer trabalhar conosco?"). Em **Tópicos** (recomendado) o
+  Claude diz o que responder e com quais fatos, e você escreve; em
+  **Rascunho** ele escreve um texto para você editar. Dá para escolher
+  português, inglês ou espanhol e pedir uma versão curta. O servidor confere
+  a resposta sem IA e aponta números que não estão no currículo, afirmações
+  sem trecho correspondente, o que a vaga pede e você não mostra, expressões
+  com cara de texto de IA e respostas acima do limite.
+
+### Mercado
+
+A página inicial. Responde "como está o mercado nos meus filtros?" antes de
+qualquer clique, sem IA.
+
+![Painel do Mercado](docs/images/mercado.png)
+
+- **Período**: últimas 24 horas, 7 dias ou 30 dias.
+- Totais: **vagas publicadas** (uma vaga em vários sites conta uma vez),
+  **remotas**, **empresas contratando** e **sem data de publicação** (passam
+  nos filtros, mas ficam fora dos números).
+- **Qual site tem mais vagas**: vagas por fonte.
+- **Vagas publicadas por dia**: empilhadas por fonte, pelo horário de
+  Brasília. **Ver tabela** mostra os números.
+- **Empresas que mais publicaram** (as 10 primeiras), **Tecnologias mais
+  pedidas** e **Modalidade**.
+
+Use para decidir o que estudar (as tecnologias mais pedidas) e onde procurar
+(as fontes e empresas com mais vagas).
+
+### Hoje
+
+O que pede ação hoje, numa tela só:
+
+- **Emails**: o estado da leitura do Gmail (última sincronização, rodada em
+  andamento ou com falha) e o botão **Sincronizar agora**. Com os dados
+  desatualizados, a tela não diz "sem pendências".
+- **Emails que podem exigir ação**: convites para entrevista, etapas de teste
+  e candidaturas incompletas, com o prazo quando o email diz um. Prazo
+  próximo vem primeiro. **Abrir email** leva ao Gmail; dispensar tira o aviso
+  da lista, com *desfazer*. Detalhes em
+  [docs/email-action-alerts.md](docs/email-action-alerts.md).
+- **Follow-ups**: candidaturas paradas há tempo demais no mesmo status. Marque
+  que fez o follow-up ou adie o lembrete.
+- **Emails com sugestão de status** 🔑: o Claude leu um email e sugere mudar o
+  status de uma candidatura. Confirme em *Candidaturas*.
+- **Candidaturas por status** e um atalho para as vagas salvas que esperam
+  candidatura.
+- **Confira também os emails fora do filtro**: aparece se você configurou
+  `RECRUITING_RESCUE_SENDERS`, e abre essa busca no Gmail.
+
+### Candidaturas
+
+Todas as candidaturas do perfil, com o status de cada uma.
+
+- **Registrar candidatura**: empresa, cargo, link, status, notas,
+  senioridade, modalidade, local e a data em que foi registrada.
+- **Buscar e filtrar**: por texto, pelo período de cadastro (7, 30 ou 90 dias,
+  ou um período seu) e pela ordem (mais recentes, mais antigas, mais
+  avançadas no funil ou começo do funil).
+- **Mudar status**: rascunho, aplicado, triagem, entrevista, teste, oferta,
+  rejeitado ou cancelado. Cada mudança entra no **Histórico** da candidatura,
+  com **quando aconteceu** (que pode ser diferente de quando você registrou)
+  e a origem: você, um email ou uma sugestão de IA confirmada. **Ler o email**
+  abre o email que motivou a mudança.
+- **Sugestão de status a partir de um email** 🔑: quando o Claude lê uma
+  resposta da empresa, a sugestão aparece no card com o motivo. Nada muda
+  sem o seu clique.
+- **Ver detalhes**, **Editar** e **Excluir**. Candidatura excluída some da
+  lista e das métricas.
+- **Responder perguntas do formulário** 🔑: o mesmo painel da página da vaga.
+
+### Currículo
+
+O seu currículo estruturado, de onde saem o PDF, as análises e as respostas.
+
+- **Importar currículo (PDF)** 🔑: o texto é extraído na sua máquina e perde
+  nome, contatos e documentos antes de ir ao Claude, que preenche o
+  formulário para você revisar. Também dá para importar o **arquivo de dados
+  do LinkedIn**, sem IA.
+- **Dados pessoais**, **Resumo**, **Experiências**, **Formação**,
+  **Competências**, **Projetos**, **Idiomas** e **Certificações**. Nada é
+  gravado até você clicar em **Salvar**.
+- **Histórico profissional**: fatos verdadeiros da sua trajetória que não
+  couberam no currículo, e a lista do que você **não** quer mostrar. As
+  análises e respostas usam o histórico como prova, e nunca sugerem o que
+  está na lista de excluídos.
+- **Ver e salvar PDF**: abre o currículo pronto para imprimir em PDF pelo
+  navegador.
+
+### Emails
+
+Os emails do rótulo do Gmail que ainda não estão ligados a uma candidatura.
+
+- **Sincronizar agora**: lê os emails novos do rótulo.
+- Em cada email: **Registrar candidatura** a partir dele, vincular a uma
+  candidatura existente ou **Remover da lista** (com *desfazer*; o Gmail não
+  é alterado).
+- **Resolver por IA** 🔑: selecione vários emails e o Claude propõe um plano
+  (criar candidaturas, vincular a existentes, ignorar). Você revisa o plano e
+  aplica, ou **Descarta plano**. Só vão ao Claude emails com remetente
+  verificado.
+
+### Métricas
+
+O que aconteceu depois que você se candidatou, calculado a partir do
+histórico, sem IA.
+
+- Totais: **ativas**, **responderam**, **rejeitadas**, **em rascunho**,
+  **vagas recebidas**, **salvas**, **dispensadas** e **emails**.
+- **Funil**: quantas candidaturas chegaram a cada etapa. Conta quem já passou
+  pela etapa, não só quem está nela agora.
+- **Tempo até a primeira resposta**, **Emails por dia** e **Vagas recebidas
+  por dia**.
+- **O que cada fonte rendeu** e **De onde vieram suas candidaturas**: qual
+  site trouxe vagas que você aproveitou.
+
+Com poucas candidaturas, as taxas de conversão ficam ocultas em vez de mostrar
+uma porcentagem sobre quatro casos.
 
 ## Configuração opcional
 
@@ -197,10 +382,21 @@ ANTHROPIC_API_KEY=sua-chave
 
 A chave precisa de crédito: sem saldo, a API responde erro e a tela avisa.
 
-Os modelos usados são o **Haiku** para ler vagas, emails e currículos e o
-**Sonnet** para escrever respostas de formulário. O app só chama o Claude quando você pede
-(um clique, uma seleção) ou ao sincronizar emails já vinculados a uma
-candidatura. No uso pessoal, cada chamada custa frações de centavo de dólar.
+O app só chama o Claude quando você pede (um clique, uma seleção), ao
+sincronizar emails já vinculados a uma candidatura, ou quando o
+[agente diário](#agente-diário) roda. Cada função usa o modelo que cabe nela:
+
+| Função | Modelo | Custo relativo |
+| --- | --- | --- |
+| Ler vaga por link, email, currículo em PDF; sugerir status; Resolver por IA | Haiku | baixo |
+| Currículo adaptado, preparação para entrevista, perguntas do formulário | Sonnet | médio |
+| Aderência entre a vaga e o currículo | Opus | alto |
+
+A aderência é a chamada cara: é julgamento sobre o currículo inteiro. Uma
+análise por clique pesa pouco, mas o agente diário pode fazer dezenas num dia.
+Defina um limite de gasto mensal em `console.anthropic.com` (*Billing*) antes
+de ligar o agente. Cada função tem também um teto de chamadas por minuto, e
+passar dele devolve um aviso em vez de cobrar.
 
 O que sai da sua máquina:
 
@@ -317,11 +513,61 @@ npx playwright-core install chromium
 ```
 
 O navegador abre com um perfil próprio, guardado em
-`~/.local/share/job-tracker/`, fora da pasta do projeto — suas abas e logins
+`~/.local/share/job-tracker/`, fora da pasta do projeto: suas abas e logins
 do dia a dia não são tocados. Se a plataforma
 pedir login, faça pelo próprio navegador que abrir; a sessão fica salva nesse
 perfil. O app preenche nome, email, telefone e links, deixa em branco o que não
 reconhece e **nunca envia**: você revisa e clica em enviar.
+
+## Agente diário
+
+Um script que roda sozinho todo dia, procura vagas boas para você e deixa o
+resultado dentro do app, em *Vagas → Minhas vagas → Seleção do agente*. Precisa
+da chave da Anthropic e funciona só no macOS (o agendamento usa o `launchd`).
+
+O que ele faz, nesta ordem:
+
+1. Lê a busca inteira da API local, das vagas mais novas para as mais antigas
+   (até 21 dias), com os filtros do seu perfil.
+2. Descarta de graça, pelo título, o que é claramente de outra trilha
+   (back-end em outra linguagem, infraestrutura, dados, QA, mobile nativo).
+   Se o título também falar de front-end, a vaga fica.
+3. Salva e analisa a aderência de cada vaga, uma a uma, até achar a meta de
+   vagas **forte** ou **boa**, ou até bater o teto de análises do dia.
+4. Para as vagas forte ou boa, gera e salva o currículo adaptado.
+5. Avisa por notificação do Mac quantas vagas analisou e quantos emails pedem
+   ação.
+
+O que ele **nunca** faz: candidatar, enviar formulário, descartar vaga, mudar
+status de candidatura ou acessar o LinkedIn. Ele prepara; quem envia é você.
+
+Ele lembra o que já analisou e não repete. O primeiro dia é o mais caro; nos
+seguintes, só as vagas novas entram. Se o crédito acabar ou a chave for
+recusada, ele para na hora. Vaga sem descrição é pulada sem gastar análise.
+
+Para agendar (exemplo: às 9h, meta de 10 vagas boas, no máximo 60 análises):
+
+```bash
+scripts/instalar-agente-diario.sh 9 10 60
+```
+
+Para rodar agora, sem esperar o horário:
+
+```bash
+node scripts/agente-diario.mjs --top 10 --teto 60
+```
+
+| Opção | O que faz |
+| --- | --- |
+| `--top N` | Meta: quantas vagas forte ou boa encontrar (até 50) |
+| `--teto N` | Máximo de análises pagas no dia (até 500, padrão 60) |
+| `--sem-curriculo` | Analisa, mas não gera currículo adaptado |
+| `--sem-analise` | Só lista as vagas da triagem, sem chamar o Claude |
+| `--sem-aviso` | Não mostra a notificação |
+
+Se a API não estiver rodando, o agente sobe uma e a derruba no fim. O log e a
+memória do agente ficam em `~/agente-vagas`, fora do projeto. Para tirar o
+agendamento: `scripts/instalar-agente-diario.sh --remover`.
 
 ## Como funciona por dentro
 
