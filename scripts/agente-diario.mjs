@@ -4,16 +4,20 @@
  * com o Claude e avisa por notificação do macOS.
  *
  * O que ele FAZ:
- * - pede à API local a primeira rodada da descoberta, ordenada por relevância
- *   (a pontuação por código do §1.4, sem custo);
- * - salva as N melhores que ainda não foram analisadas e pede a análise de
- *   aderência de cada uma (paga: é o Claude com o currículo inteiro);
+ * - lê a busca inteira da API local, das vagas mais novas para as mais
+ *   antigas, e corta de graça, pelo título, o que é de outra trilha;
+ * - salva e analisa uma a uma (paga: é o Claude com o currículo inteiro) até
+ *   achar N vagas forte ou boa, ou bater o teto de análises do dia;
  * - para as de aderência forte ou boa, gera e salva o currículo adaptado à
  *   vaga (também pago). Ele aparece na página da vaga no app, pronto para
  *   revisar e imprimir em PDF, e é o que fica registrado quando você
  *   registrar a candidatura;
- * - junta o que a tela Hoje pede de ação (emails, follow-ups);
- * - grava um relatório em ~/agente-vagas/AAAA-MM-DD.md e notifica.
+ * - avisa por notificação quantas vagas analisou e quantos emails pedem ação.
+ *
+ * O resultado fica DENTRO do app, não num arquivo: cada análise é guardada
+ * com origem "agente", e Minhas vagas mostra a "Seleção do agente" com o
+ * veredito, o resumo e o currículo adaptado, até você marcar "Já me
+ * candidatei". Em ~/agente-vagas ficam só o log e o estado do agente.
  *
  * O que ele NUNCA faz: candidatar, enviar formulário, descartar vaga ou mudar
  * status de candidatura. O §5 proíbe envio automático, e o agente só prepara
@@ -24,8 +28,7 @@
  * quando você a inicia à mão.
  *
  * Uso: node scripts/agente-diario.mjs [--top 5] [--sem-analise] [--sem-curriculo] [--sem-aviso]
- * Variáveis: AGENTE_API (padrão http://127.0.0.1:3333), AGENTE_WEB (padrão
- * http://127.0.0.1:3000, só para os links do relatório), AGENTE_PERFIL (id do
+ * Variáveis: AGENTE_API (padrão http://127.0.0.1:3333), AGENTE_PERFIL (id do
  * perfil; padrão o perfil marcado como padrão), AGENTE_DIR (padrão
  * ~/agente-vagas).
  */
@@ -37,10 +40,17 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const API = process.env.AGENTE_API ?? 'http://127.0.0.1:3333';
-const WEB = process.env.AGENTE_WEB ?? 'http://127.0.0.1:3000';
 const DIR = process.env.AGENTE_DIR ?? join(homedir(), 'agente-vagas');
 const args = process.argv.slice(2);
+/** Meta do dia: quantas vagas forte ou boa encontrar (não quantas analisar). */
 const TOP = Number(valueOf('--top') ?? 5);
+/**
+ * Teto de análises pagas por dia. Sem ele, um dia sem vaga boa varreria a
+ * lista inteira e zeraria o crédito, como aconteceu em 19/11.
+ */
+const MAX_ANALYSES = Number(valueOf('--teto') ?? 60);
+/** Vaga mais velha que isto já tem gente demais concorrendo. Sem data entra no fim. */
+const MAX_AGE_DAYS = 21;
 const ANALYZE = !args.includes('--sem-analise');
 const NOTIFY = !args.includes('--sem-aviso');
 const TAILOR = ANALYZE && !args.includes('--sem-curriculo');
@@ -51,8 +61,37 @@ const TAILOR_VERDICTS = ['forte', 'boa'];
 if (!/^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(API)) {
   throw new Error(`AGENTE_API precisa ser local, recebi ${API}`);
 }
-if (!Number.isInteger(TOP) || TOP < 0 || TOP > 20) {
-  throw new Error('--top precisa ser um inteiro entre 0 e 20.');
+if (!Number.isInteger(TOP) || TOP < 0 || TOP > 50) {
+  throw new Error('--top precisa ser um inteiro entre 0 e 50.');
+}
+if (!Number.isInteger(MAX_ANALYSES) || MAX_ANALYSES < 1 || MAX_ANALYSES > 500) {
+  throw new Error('--teto precisa ser um inteiro entre 1 e 500.');
+}
+
+/**
+ * Triagem de graça, pelo título, antes de pagar a análise. Corta o que é
+ * claramente de outra trilha (back-end em outra linguagem, infra, dados, QA,
+ * mobile nativo), a não ser que o título também fale de front-end: "Full
+ * Stack React/Java" ainda vale a análise, "Desenvolvedor Java" não.
+ */
+const OFF_TRACK =
+  /(\.net|\bc#|\bjava\b(?!script)|python|golang|\bgo\b|ruby|rails|scala|elixir|rust|kotlin|swift|\bios\b|android|flutter|devops|\bsre\b|infra|platform engineer|cloud engineer|data (engineer|scien|analyst)|engenheir[oa] de dados|cientista de dados|analista de dados|machine learning|\bml\b|\bqa\b|quality|tester|testes|sap\b|salesforce|abap|cobol|mainframe|delphi|protheus|power bi|blockchain|solidity|embedded|embarcad|security|seguran|back-?\s?end|\bvb6?\b|visual basic|\brpa\b|hubspot|\bcrm\b|neg[oó]cios|banking|(?:\bai\b|\bia\b) engineer|engineer,? ai|desenvolvedor(?:\(a\))? de ia|llm)/i;
+const FRONT_TRACK =
+  /(front|react|next|vue|nuxt|angular|typescript|javascript|drupal|wordpress|\bui\b|web)/i;
+
+function onTrack(job) {
+  return !OFF_TRACK.test(job.title) || FRONT_TRACK.test(job.title);
+}
+
+/** Até quando a vaga conta como nova. Sem data: conta, mas vem depois. */
+function fresh(job) {
+  if (!job.postedAt) return true;
+  return Date.now() - Date.parse(job.postedAt) <= MAX_AGE_DAYS * 86_400_000;
+}
+
+/** Falta de crédito ou chave recusada: todas as próximas falhariam igual. */
+function fatal(error) {
+  return /crédito|ANTHROPIC_API_KEY|chave/i.test(error.message ?? '');
 }
 
 function valueOf(flag) {
@@ -163,7 +202,7 @@ function notify(message) {
         '-e',
         'end run',
         message,
-        'Relatório em ~/agente-vagas',
+        'Veja em Minhas vagas, Seleção do agente',
       ],
       () => done(),
     ),
@@ -172,7 +211,9 @@ function notify(message) {
 
 async function main() {
   await mkdir(DIR, { recursive: true });
-  await log(`Início: top ${TOP}, análise ${ANALYZE ? 'ligada' : 'desligada'}.`);
+  await log(
+    `Início: meta de ${TOP} vagas forte ou boa, teto de ${MAX_ANALYSES} análises, análise ${ANALYZE ? 'ligada' : 'desligada'}.`,
+  );
 
   const started = await ensureApi();
 
@@ -185,23 +226,43 @@ async function main() {
     if (!profile) throw new Error('Nenhum perfil cadastrado.');
 
     const state = await loadState();
-    const discover = await api(
-      `/jobs/discover?profileId=${encodeURIComponent(profile.id)}&sort=relevancia`,
-      { timeoutMs: 180_000 },
-    );
+    // Todas as páginas da busca, das mais novas para as mais antigas: a meta
+    // é achar vaga boa, e vaga nova é a com menos gente concorrendo. A busca
+    // guarda a rodada em cache, então as páginas seguintes saem rápido.
+    const discover = { items: [], total: 0, failedSources: [] };
+    let cursor = null;
+    for (let page = 0; page < 60; page += 1) {
+      const query = new URLSearchParams({ profileId: profile.id, sort: 'recentes' });
+      if (cursor) query.set('cursor', cursor);
+      const result = await api(`/jobs/discover?${query}`, { timeoutMs: 180_000 });
+      discover.items.push(...result.items);
+      discover.total = result.total;
+      discover.failedSources = result.failedSources;
+      cursor = result.nextCursor;
+      if (!cursor) break;
+    }
 
     // A descoberta já tira o que você salvou, aplicou ou descartou; aqui sai
-    // também o que o agente analisou em dias anteriores.
-    const fresh = discover.items.filter((job) => !state.analyzed[job.url]);
+    // também o que o agente analisou em dias anteriores, o que é de outra
+    // trilha pelo título e o que é velho demais.
+    const unseen = discover.items.filter((job) => !state.analyzed[job.url]);
+    const onTrackJobs = unseen.filter(onTrack);
+    const queue = onTrackJobs.filter(fresh);
+    await log(
+      `Busca: ${discover.items.length} vagas lidas, ${unseen.length} ainda não analisadas, ${onTrackJobs.length} no seu perfil pelo título, ${queue.length} publicadas nos últimos ${MAX_AGE_DAYS} dias ou sem data.`,
+    );
     const analyses = [];
-    // Sem análise, o topo é só a lista. Com análise, vaga recusada por falta de
-    // descrição não ocupa vaga do dia: o agente segue para a próxima, até um
-    // limite, para não varrer a lista inteira num dia ruim.
     const picked = [];
-    const candidates = ANALYZE ? fresh.slice(0, TOP + 5) : fresh.slice(0, TOP);
+    const isGood = (a) => TAILOR_VERDICTS.includes(a.fit?.verdict);
 
-    for (const job of candidates) {
-      if (picked.length - analyses.filter((a) => a.skipped).length >= TOP) break;
+    for (const job of ANALYZE ? queue : queue.slice(0, TOP)) {
+      if (ANALYZE) {
+        if (analyses.filter(isGood).length >= TOP) break;
+        if (analyses.filter((a) => a.fit || (a.error && !a.skipped)).length >= MAX_ANALYSES) {
+          await log(`Teto de ${MAX_ANALYSES} análises atingido.`);
+          break;
+        }
+      }
       picked.push(job);
       if (!ANALYZE) continue;
       let saved = null;
@@ -213,7 +274,8 @@ async function main() {
         });
         const fit = await api('/job-fit', {
           method: 'POST',
-          body: JSON.stringify({ profileId: profile.id, jobId: saved.jobId }),
+          // A origem é o que põe a vaga na "Seleção do agente" do app.
+          body: JSON.stringify({ profileId: profile.id, jobId: saved.jobId, origin: 'agente' }),
           timeoutMs: 180_000,
         });
         const entry = { job, fit, jobId: saved.jobId };
@@ -254,6 +316,7 @@ async function main() {
           state.analyzed[job.url] = { date: today, skipped: error.message };
         }
         await log(`Falhou a análise de ${plain(job.company, 60)}: ${error.message}`);
+        const stop = fatal(error);
         // Vaga salva some da descoberta: sem desfazer, uma falha (chave
         // inválida, rede) esconderia a vaga para sempre do agente e de você.
         if (saved) {
@@ -262,6 +325,10 @@ async function main() {
             { method: 'DELETE' },
           ).catch(() => log(`Não consegui desfazer o salvamento de ${plain(job.company, 60)}.`));
         }
+        if (stop) {
+          await log('Parando: sem crédito ou chave recusada, as próximas falhariam igual.');
+          break;
+        }
       }
     }
 
@@ -269,58 +336,14 @@ async function main() {
       `/today?profileId=${encodeURIComponent(profile.id)}`,
     );
 
-    const good = analyses.filter((a) => ['forte', 'boa'].includes(a.fit?.verdict));
-    const lines = [
-      `# Agente diário: ${today}`,
-      '',
-      `Descoberta: ${discover.total} vagas no filtro, ${fresh.length} ainda não analisadas pelo agente.`,
-      discover.failedSources.length
-        ? `Fontes que falharam nesta rodada: ${discover.failedSources.join(', ')}. A lista pode estar incompleta.`
-        : 'Todas as fontes responderam.',
-      '',
-      ANALYZE ? `## Análise das melhores (${picked.length} tentadas)` : `## As ${picked.length} melhores (sem análise)`,
-      '',
-    ];
-
-    for (const job of picked) {
-      const analysis = analyses.find((a) => a.job === job);
-      lines.push(`### ${plain(job.title, 120)} · ${plain(job.company, 80)}`);
-      lines.push(`${job.url} (fonte: ${plain(job.source, 40)})`);
-      if (analysis?.fit) {
-        lines.push(`**Aderência: ${analysis.fit.verdict}.** ${plain(analysis.fit.summary, 600)}`);
-        lines.push('');
-        lines.push(`- Página da vaga no app (análise e currículo): ${WEB}/vagas/${analysis.jobId}`);
-        if (analysis.tailored) {
-          lines.push(
-            `- Currículo adaptado pronto: revise e imprima em PDF em ${WEB}/vagas/${analysis.jobId}/curriculo`,
-          );
-        } else if (analysis.tailorError) {
-          lines.push(`- Currículo adaptado falhou (${plain(analysis.tailorError, 160)}); adapte na página da vaga.`);
-        }
-      } else if (analysis?.skipped) {
-        lines.push(`Pulada, não volta nos próximos dias: ${plain(analysis.error, 200)}`);
-      } else if (analysis?.error) {
-        lines.push(`Análise falhou, tenta de novo amanhã: ${plain(analysis.error, 200)}`);
-      }
-      lines.push('');
+    const good = analyses.filter(isGood);
+    if (discover.failedSources.length) {
+      await log(`Fontes que falharam nesta rodada: ${discover.failedSources.join(', ')}.`);
     }
-
-    lines.push('## Hoje no app', '');
-    lines.push(`- Emails que podem exigir ação: ${todayView.emailActions.length}`);
-    lines.push(`- Follow-ups vencidos: ${todayView.followUps.length}`);
-    lines.push(`- Sugestões de status esperando você: ${todayView.pendingSuggestions}`);
-    lines.push(
-      `- Emails: ${todayView.emailSync.freshness === 'em-dia' ? 'sincronizados' : 'não estão em dia, sincronize no app'}`,
-    );
-    lines.push(
-      '',
-      'Nada foi enviado. Para candidatar: abra o currículo adaptado, revise e salve em PDF; em Minhas vagas, use Preencher no card da vaga para abrir o formulário da empresa, anexe o PDF, revise e envie você mesmo.',
-    );
-
-    const report = join(DIR, `${today}.md`);
-    await writeFile(report, `${lines.join('\n')}\n`);
     await writeFile(join(DIR, 'estado.json'), JSON.stringify(state, null, 2));
-    await log(`Relatório: ${report}`);
+    await log(
+      `Fim: ${analyses.filter((a) => a.fit).length} analisadas, ${good.length} boas ou fortes, ${analyses.filter((a) => a.tailored).length} currículos adaptados.`,
+    );
 
     if (NOTIFY) {
       await notify(

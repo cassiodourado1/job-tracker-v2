@@ -87,6 +87,7 @@ model Profile {
   applications   Application[]
   resumeVersions ResumeVersion[]
   interviewPreps InterviewPrep[]
+  jobFits        JobFitAnalysis[]
   emailMessages  EmailMessage[]
   savedJobs      SavedJob[]
   dismissedJobs  DismissedJob[]
@@ -194,6 +195,7 @@ model Job {
   savedBy        SavedJob[]
   resumeVersions ResumeVersion[]
   interviewPreps InterviewPrep[]
+  jobFits        JobFitAnalysis[]
 }
 
 /// Vaga guardada por um perfil para aplicar depois.
@@ -344,6 +346,47 @@ model InterviewPrep {
   job     Job     @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
   @@index([profileId, jobId, createdAt])
+}
+
+/// A última análise de aderência de uma vaga para um perfil.
+///
+/// Guardada porque cada análise é uma chamada paga, e porque é ela que a tela
+/// de Minhas vagas mostra no card: sem isto, o que o agente diário analisou de
+/// manhã só existia num arquivo fora do app, e abrir a vaga pedia pagar de novo.
+///
+/// Uma por par: analisar de novo substitui. O histórico de análises não
+/// responde pergunta nenhuma do produto; a última é a que vale para decidir.
+model JobFitAnalysis {
+  id        String @id @default(cuid())
+  profileId String
+  jobId     String
+
+  /// Coluna própria, e não só dentro de `content`: é por ela que a lista filtra.
+  verdict FitVerdict
+  /// O `JobFit` inteiro, validado com Zod na leitura.
+  content Json
+  /// Quem pediu: o agente diário ou você, na tela. A seleção do agente é isto.
+  origin  FitOrigin
+
+  analyzedAt DateTime @default(now())
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  job     Job     @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, jobId])
+  @@index([profileId, origin, analyzedAt])
+}
+
+enum FitVerdict {
+  forte
+  boa
+  parcial
+  fraca
+}
+
+enum FitOrigin {
+  agente
+  tela
 }
 
 /// Email ingerido por IMAP, vinculado ou não a uma candidatura.

@@ -103,6 +103,7 @@ export async function applyToJobAction(
     await registerApplied(profileId, jobId);
     revalidatePath("/candidaturas");
     revalidatePath("/vagas/salvas");
+    revalidatePath(`/vagas/${jobId}`);
 
     return { status: "success" };
   } catch (error) {

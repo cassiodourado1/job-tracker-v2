@@ -1,24 +1,28 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import type { FitVerdict, GapSeverity, JobFit } from "@recruit/shared";
+import type { GapSeverity, StoredJobFit } from "@recruit/shared";
 import { analyzeJobFitAction } from "@/features/job-fit/actions";
+import { VERDICT_LABEL, VERDICT_TONE } from "@/features/job-fit/components/verdict";
 
 /**
  * Aderência entre esta vaga e o seu currículo, pelo Claude.
  *
- * Só roda no clique: cada análise é uma chamada paga. O que o modelo diz que
+ * Só roda no clique: cada análise é uma chamada paga. A última fica guardada
+ * e abre pronta, inclusive a que o agente diário fez de manhã. O que o modelo diz que
  * você tem vem com o trecho do currículo que prova; trecho que o servidor não
  * achou no currículo aparece marcado para você conferir.
  */
 export function FitPanel({
   profileId,
   jobId,
+  initial,
 }: {
   profileId: string;
   jobId: string;
+  initial: StoredJobFit | null;
 }) {
-  const [fit, setFit] = useState<JobFit | null>(null);
+  const [fit, setFit] = useState<StoredJobFit | null>(initial);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -73,6 +77,10 @@ export function FitPanel({
               Aderência {VERDICT_LABEL[fit.verdict]}
             </span>
             <p className="text-sm">{fit.summary}</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              {fit.origin === "agente" ? "Analisada pelo agente diário" : "Analisada"}{" "}
+              em {formatWhen(fit.analyzedAt)}.
+            </p>
           </div>
 
           {fit.strengths.length > 0 && (
@@ -134,19 +142,15 @@ export function FitPanel({
   );
 }
 
-const VERDICT_LABEL: Record<FitVerdict, string> = {
-  forte: "forte",
-  boa: "boa",
-  parcial: "parcial",
-  fraca: "fraca",
-};
-
-const VERDICT_TONE: Record<FitVerdict, string> = {
-  forte: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
-  boa: "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300",
-  parcial: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
-  fraca: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300",
-};
+function formatWhen(iso: string): string {
+  return new Date(iso).toLocaleString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 const SEVERITY_ORDER: Record<GapSeverity, number> = {
   bloqueia: 0,

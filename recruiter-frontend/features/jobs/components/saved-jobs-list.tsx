@@ -19,13 +19,86 @@ import {
 import type { SavedJob } from "@/features/jobs/types";
 import { openableJobUrl } from "@recruit/shared";
 import { safeExternalUrl } from "@/lib/safe-url";
+import { VERDICT_LABEL, VERDICT_TONE } from "@/features/job-fit/components/verdict";
+import type { FitVerdict } from "@recruit/shared";
 
 interface SavedJobsListProps {
   profileId: string;
   saved: SavedJob[];
 }
 
+/**
+ * Recortes da lista. "Seleção do agente" é o que o agente diário analisou e
+ * você ainda não enviou: é a fila do dia, e por isso sai quando você marca
+ * "Já me candidatei". O relatório fora do app deixou de ser o lugar disto.
+ */
+type View = "agente" | "pendentes" | "candidatadas" | "todas";
+
+const VIEWS: { id: View; label: string; empty: string }[] = [
+  {
+    id: "agente",
+    label: "Seleção do agente",
+    empty: "Nada na seleção do agente. Ele analisa as vagas todo dia às 9h.",
+  },
+  {
+    id: "pendentes",
+    label: "Para enviar",
+    empty: "Nenhuma vaga salva esperando candidatura.",
+  },
+  {
+    id: "candidatadas",
+    label: "Já me candidatei",
+    empty: "Nenhuma candidatura registrada a partir das vagas salvas.",
+  },
+  { id: "todas", label: "Todas", empty: "Nenhuma vaga salva ainda." },
+];
+
+const VERDICT_ORDER: Record<FitVerdict, number> = {
+  forte: 0,
+  boa: 1,
+  parcial: 2,
+  fraca: 3,
+};
+
+function inView(item: SavedJob, view: View): boolean {
+  switch (view) {
+    case "agente":
+      return item.fit?.origin === "agente" && !item.application;
+    case "pendentes":
+      return !item.application;
+    case "candidatadas":
+      return Boolean(item.application);
+    case "todas":
+      return true;
+  }
+}
+
+/**
+ * Na seleção do agente, a melhor aderência primeiro e, no empate, a análise
+ * mais recente: é a ordem em que vale a pena enviar. Nos outros recortes, a
+ * ordem de quando você salvou, como sempre foi.
+ */
+function ordered(items: SavedJob[], view: View): SavedJob[] {
+  if (view !== "agente") {
+    return items;
+  }
+
+  return [...items].sort(
+    (a, b) =>
+      VERDICT_ORDER[a.fit!.verdict] - VERDICT_ORDER[b.fit!.verdict] ||
+      b.fit!.analyzedAt.localeCompare(a.fit!.analyzedAt),
+  );
+}
+
 export function SavedJobsList({ profileId, saved }: SavedJobsListProps) {
+  const hasAgentPicks = saved.some((item) => inView(item, "agente"));
+  const [view, setView] = useState<View>(hasAgentPicks ? "agente" : "todas");
+  const visible = ordered(
+    saved.filter((item) => inView(item, view)),
+    view,
+  );
+  const current = VIEWS.find((entry) => entry.id === view)!;
+
   return (
     <div className="mx-auto flex w-full max-w-[110rem] flex-col gap-4">
       <JobsTabs savedCount={saved.length} />
@@ -34,7 +107,40 @@ export function SavedJobsList({ profileId, saved }: SavedJobsListProps) {
         Vagas que você guardou. Continuam aqui depois de aplicadas.
       </p>
 
-      {saved.length === 0 ? (
+      {saved.length > 0 && (
+        <div
+          role="group"
+          aria-label="Recorte das vagas salvas"
+          className="flex flex-wrap gap-2"
+        >
+          {VIEWS.map((entry) => {
+            const count = saved.filter((item) => inView(item, entry.id)).length;
+            const active = entry.id === view;
+
+            return (
+              <button
+                key={entry.id}
+                type="button"
+                aria-pressed={active}
+                onClick={() => setView(entry.id)}
+                className={`cursor-pointer whitespace-nowrap rounded-full border px-3 py-1 text-sm font-medium transition ${
+                  active
+                    ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
+                    : "border-zinc-300 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
+                }`}
+              >
+                {entry.label} ({count})
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {saved.length > 0 && visible.length === 0 ? (
+        <div className="cine-glass rounded-2xl px-6 py-10 text-center text-sm text-zinc-500 dark:text-zinc-400">
+          {current.empty}
+        </div>
+      ) : saved.length === 0 ? (
         <div className="cine-glass flex flex-col items-center gap-3 rounded-2xl px-6 py-14 text-center">
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
             Nenhuma vaga salva ainda.
@@ -48,7 +154,7 @@ export function SavedJobsList({ profileId, saved }: SavedJobsListProps) {
         </div>
       ) : (
         <ul className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {saved.map((item, index) => (
+          {visible.map((item, index) => (
             <SavedCard
               key={item.jobId}
               index={index}
@@ -71,7 +177,7 @@ function SavedCard({
   profileId: string;
   item: SavedJob;
 }) {
-  const { job, application } = item;
+  const { job, application, fit, tailored } = item;
   const [error, setError] = useState<string | null>(null);
   const [fill, setFill] = useState<FillState>({ status: "idle" });
   const [confirming, setConfirming] = useState(false);
@@ -115,8 +221,61 @@ function SavedCard({
             )}
           </div>
 
+          {fit && (
+            <div className="flex flex-col gap-1.5">
+              <span className="flex flex-wrap items-center gap-2">
+                <span
+                  className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${VERDICT_TONE[fit.verdict]}`}
+                >
+                  Aderência {VERDICT_LABEL[fit.verdict]}
+                </span>
+                {application && (
+                  <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                    Candidatura: {application.status}
+                  </span>
+                )}
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                  {fit.origin === "agente" ? "pelo agente" : "por você"} em{" "}
+                  {new Date(fit.analyzedAt).toLocaleDateString("pt-BR", {
+                    timeZone: "America/Sao_Paulo",
+                    day: "2-digit",
+                    month: "2-digit",
+                  })}
+                </span>
+              </span>
+              {/* Texto do modelo sobre conteúdo de terceiros: só texto, nunca
+                  HTML, e cortado no card; a análise inteira fica na vaga. */}
+              <p className="line-clamp-3 text-sm text-zinc-600 dark:text-zinc-300">
+                {fit.summary}
+              </p>
+            </div>
+          )}
+
+          {!fit && application && (
+            <span className="self-start rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+              Candidatura: {application.status}
+            </span>
+          )}
+
           <JobTags job={job} />
           <StackTags stack={job.stack} />
+
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+            <Link
+              href={`/vagas/${job.id}`}
+              className="font-medium underline underline-offset-4"
+            >
+              {fit ? "Ver análise completa" : "Analisar a vaga"}
+            </Link>
+            {tailored && (
+              <Link
+                href={`/vagas/${job.id}/curriculo`}
+                className="font-medium underline underline-offset-4"
+              >
+                Currículo adaptado
+              </Link>
+            )}
+          </div>
 
           {salary && (
             <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">

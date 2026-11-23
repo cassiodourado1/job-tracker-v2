@@ -7,11 +7,14 @@ import {
 import {
   DEFAULT_JOB_SORT,
   defaultJobPreferences,
+  jobFitSchema,
   jobPreferencesSchema,
   resumeSchema,
   type DashboardWindow,
   type DiscoverResult,
   type DismissJobInput,
+  type FitOrigin,
+  type FitVerdict,
   type JobDrilldown,
   type Job,
   type JobsDashboard,
@@ -22,6 +25,7 @@ import {
   type UndismissJobInput,
 } from '@recruit/shared';
 import { PrismaService } from '../prisma/prisma.service';
+import type { Prisma } from '../generated/prisma/client';
 import type { JobModel } from '../generated/prisma/models';
 import { canonicalJobUrl } from './discovery/canonical-url';
 import { buildDashboard } from './dashboard';
@@ -305,6 +309,8 @@ export class JobService {
         savedAt: saved.savedAt.toISOString(),
         job: toJobDto(job),
         application: null,
+        // A vaga pode já existir (outro caminho a salvou antes) com análise.
+        ...(await savedExtras(tx, profileId, job.id)),
       };
     });
   }
@@ -326,6 +332,12 @@ export class JobService {
               select: { id: true, status: true },
               take: 1,
             },
+            jobFits: { where: { profileId } },
+            resumeVersions: {
+              where: { profileId },
+              select: { id: true },
+              take: 1,
+            },
           },
         },
       },
@@ -336,6 +348,8 @@ export class JobService {
       savedAt: row.savedAt.toISOString(),
       job: toJobDto(row.job),
       application: row.job.applications[0] ?? null,
+      fit: fitSummary(row.job.jobFits[0]),
+      tailored: row.job.resumeVersions.length > 0,
     }));
   }
 
@@ -351,6 +365,44 @@ export class JobService {
       });
     }
   }
+}
+
+type FitRow = {
+  verdict: FitVerdict;
+  content: unknown;
+  analyzedAt: Date;
+  origin: FitOrigin;
+};
+
+/** Só o que o card usa; o resumo sai do conteúdo validado, nunca cru. */
+function fitSummary(row: FitRow | undefined): SavedJob['fit'] {
+  const content = row && jobFitSchema.safeParse(row.content);
+
+  if (!row || !content?.success) {
+    return null;
+  }
+
+  return {
+    verdict: row.verdict,
+    summary: content.data.summary,
+    analyzedAt: row.analyzedAt.toISOString(),
+    origin: row.origin,
+  };
+}
+
+async function savedExtras(
+  tx: Prisma.TransactionClient,
+  profileId: string,
+  jobId: string,
+): Promise<Pick<SavedJob, 'fit' | 'tailored'>> {
+  const [fit, tailored] = await Promise.all([
+    tx.jobFitAnalysis.findUnique({
+      where: { profileId_jobId: { profileId, jobId } },
+    }),
+    tx.resumeVersion.count({ where: { profileId, jobId } }),
+  ]);
+
+  return { fit: fitSummary(fit ?? undefined), tailored: tailored > 0 };
 }
 
 function toJobDto(row: JobModel): Job {

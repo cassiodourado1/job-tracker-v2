@@ -18,7 +18,13 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { resumeSchema, type CareerHistory, type JobFit } from '@recruit/shared';
+import {
+  jobFitSchema,
+  resumeSchema,
+  type CareerHistory,
+  type FitOrigin,
+  type StoredJobFit,
+} from '@recruit/shared';
 import { isResumeEmpty, renderResume } from '../answers/answer-plan';
 import {
   historySystemBlocks,
@@ -63,7 +69,11 @@ export class JobFitService {
       : null;
   }
 
-  async analyze(profileId: string, jobId: string): Promise<JobFit> {
+  async analyze(
+    profileId: string,
+    jobId: string,
+    origin: FitOrigin = 'tela',
+  ): Promise<StoredJobFit> {
     if (!this.client) {
       throw new ServiceUnavailableException({
         error: 'Service Unavailable',
@@ -102,7 +112,48 @@ export class JobFitService {
       });
     }
 
-    return finalizeFit(message.parsed_output, resumeText, history);
+    const fit = finalizeFit(message.parsed_output, resumeText, history);
+
+    // Guarda já conferida (os trechos marcados), que é o que a tela mostra.
+    // Analisar de novo substitui: a última é a que vale para decidir.
+    const saved = await this.prisma.jobFitAnalysis.upsert({
+      where: { profileId_jobId: { profileId, jobId } },
+      create: { profileId, jobId, verdict: fit.verdict, content: fit, origin },
+      update: {
+        verdict: fit.verdict,
+        content: fit,
+        origin,
+        analyzedAt: new Date(),
+      },
+    });
+
+    return {
+      ...fit,
+      analyzedAt: saved.analyzedAt.toISOString(),
+      origin: saved.origin,
+    };
+  }
+
+  /**
+   * A análise guardada, ou null. Conteúdo que não passa no schema de hoje
+   * (gravado por uma versão antiga) conta como ausente: melhor pedir para
+   * analisar de novo do que mostrar uma análise pela metade.
+   */
+  async latest(profileId: string, jobId: string): Promise<StoredJobFit | null> {
+    const row = await this.prisma.jobFitAnalysis.findUnique({
+      where: { profileId_jobId: { profileId, jobId } },
+    });
+    const content = row && jobFitSchema.safeParse(row.content);
+
+    if (!row || !content?.success) {
+      return null;
+    }
+
+    return {
+      ...content.data,
+      analyzedAt: row.analyzedAt.toISOString(),
+      origin: row.origin,
+    };
   }
 
   /**
