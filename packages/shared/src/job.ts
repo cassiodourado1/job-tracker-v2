@@ -79,6 +79,11 @@ export type Job = z.infer<typeof jobSchema>;
 export const saveJobSchema = z.strictObject({
   profileId: z.string().min(1),
   result: jobSearchResultSchema,
+  /**
+   * Quem salva. Sem origem é a tela: só o agente diário se identifica, e é
+   * isso que põe a vaga na Seleção do agente mesmo sem análise por IA.
+   */
+  origin: fitOriginSchema.default('tela'),
 });
 
 export type SaveJobInput = z.infer<typeof saveJobSchema>;
@@ -91,6 +96,8 @@ export const savedJobSchema = z.object({
   jobId: z.string(),
   savedAt: z.iso.datetime(),
   job: jobSchema,
+  /** Quem salvou: você, na tela, ou o agente diário. */
+  origin: fitOriginSchema,
   application: z
     .object({ id: z.string(), status: z.string() })
     .nullable(),
