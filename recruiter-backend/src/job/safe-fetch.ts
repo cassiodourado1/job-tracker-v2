@@ -330,9 +330,18 @@ async function fetchCapped(
     throw new FetchError('Link inválido.');
   }
 
+  // O token de uma API (ex.: Rebase Jobs) vale só para quem o emitiu. Um
+  // redirecionamento para outro domínio receberia o token de brinde: como o
+  // navegador faz, o cabeçalho de credencial cai quando a origem muda.
+  const origin = current.origin;
+
   for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
     await assertReachable(current);
 
+    const headers =
+      current.origin === origin
+        ? options.headers
+        : withoutCredentials(options.headers);
     let response: Response;
 
     try {
@@ -345,7 +354,7 @@ async function fetchCapped(
           ? {}
           : { method: 'POST', body: JSON.stringify(options.query) }),
         headers: {
-          ...options.headers,
+          ...headers,
           ...(options.query === undefined
             ? {}
             : { 'Content-Type': 'application/json' }),
@@ -399,6 +408,18 @@ async function fetchCapped(
   }
 
   throw new FetchError('Redirecionamentos demais.');
+}
+
+const CREDENTIAL_HEADERS = new Set(['authorization', 'cookie']);
+
+function withoutCredentials(
+  headers: Record<string, string> = {},
+): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(headers).filter(
+      ([name]) => !CREDENTIAL_HEADERS.has(name.toLowerCase()),
+    ),
+  );
 }
 
 /**
