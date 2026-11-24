@@ -71,7 +71,7 @@ de aplicadas. Os filtros do topo separam a lista:
 
 | Filtro | O que mostra |
 | --- | --- |
-| **Seleção do agente** | O que o agente analisou e você ainda não enviou, da melhor aderência para a pior |
+| **Seleção do agente** | O que o agente encontrou e você ainda não enviou: primeiro as analisadas, da melhor aderência para a pior; depois as encontradas sem IA, marcadas como tal |
 | **Para enviar** | Vagas salvas sem candidatura registrada |
 | **Já me candidatei** | Vagas com candidatura registrada |
 | **Todas** | Tudo o que está salvo |
@@ -91,8 +91,9 @@ O card mostra a aderência e o resumo da análise, quando houver, com os links
 **Página da vaga.** Clique no nome da empresa ou do cargo num card de *Minhas
 vagas* para abrir a página da vaga no app. Ela tem os detalhes da vaga, a
 barra **Já me candidatei** (ou o status da candidatura, se já existir) e
-quatro painéis. Na interface, cada painel chama o Claude quando você solicita. O agente diário
-também pode executar análises e adaptações. O contexto inclui o currículo
+quatro painéis. Cada painel chama o Claude só quando você clica. Uma vaga que o
+agente encontrou sem IA chega aqui sem análise: o **Analisar** do primeiro
+painel é o passo pago, quando você decidir. O contexto inclui o currículo
 profissional e, quando preenchido, o histórico profissional.
 
 ![Aderência ao currículo: veredito, o que você já mostra e o que falta](images/aderencia.webp)
@@ -249,8 +250,8 @@ ANTHROPIC_API_KEY=sua-chave
 A chave precisa de crédito: sem saldo, a API responde erro e a tela avisa.
 
 O app só chama o Claude quando você pede (um clique, uma seleção), ao
-sincronizar emails já vinculados a uma candidatura, ou quando o
-[agente diário](#agente-diário) roda. Cada função usa o modelo que cabe nela:
+sincronizar emails já vinculados a uma candidatura, ou quando você roda o
+[agente diário](#agente-diário) com `--com-ia`. Cada função usa o modelo que cabe nela:
 
 | Função | Modelo | Custo relativo |
 | --- | --- | --- |
@@ -259,7 +260,8 @@ sincronizar emails já vinculados a uma candidatura, ou quando o
 | Aderência entre a vaga e o currículo | Opus | alto |
 
 A aderência usa o modelo de maior custo relativo e o currículo inteiro.
-O agente diário pode executar dezenas de análises em uma rodada.
+O agente diário com `--com-ia` pode executar dezenas de análises numa rodada;
+sem essa opção, ele não chama o Claude.
 Acompanhe o consumo no [console da Anthropic](https://console.anthropic.com/).
 Algumas funções têm limites locais de chamadas por minuto. Esses limites
 não são um orçamento financeiro nem impedem gastos em novas execuções.
@@ -356,6 +358,26 @@ empresa só não aparece; confira abrindo o endereço no navegador. Prefira
 empresas com vagas remotas ou no Brasil: um board com centenas de vagas
 presenciais no exterior enche a fila com o que você não procura.
 
+### Rebase Jobs
+
+A Rebase Jobs é consultada junto com as outras fontes de busca. Para ativá-la,
+crie um token pessoal na página de API da Rebase e coloque-o no
+`recruiter-backend/.env`:
+
+```env
+REBASE_JOBS_TOKEN=seu-token-pessoal
+```
+
+Reinicie o backend para carregar a variável. Sem token, a fonte fica desligada.
+Uma busca digitada é enviada como texto; sem texto, o app envia as tecnologias
+compatíveis com os filtros da Rebase. A resposta é limitada a 50 vagas por
+busca e só fica no resultado da descoberta: nada é importado para o banco até
+você salvar a vaga. A Rebase publica limite de 60 consultas por minuto.
+
+O comando `claude mcp add ...` configura o Claude no VS Code, não o Job Tracker.
+Para este app, use `REBASE_JOBS_TOKEN` no `.env` do backend. Se o token aparecer
+em chat, terminal compartilhado ou repositório, revogue-o e crie outro.
+
 ### Preenchimento de formulário
 
 Usa um navegador baseado em Chromium já instalado na máquina, nesta ordem:
@@ -388,62 +410,97 @@ reconhece e **nunca envia**: você revisa e clica em enviar.
 
 ## Agente diário
 
-Um script que roda sozinho todo dia, procura vagas boas para você e deixa o
-resultado dentro do app, em *Vagas → Minhas vagas → Seleção do agente*. Precisa
-da chave da Anthropic e tem agendamento e notificações implementados para macOS (`launchd` e
-`osascript`). A triagem por título está voltada a front-end e desenvolvimento web;
-essa regra fica no script, não nos filtros configuráveis do perfil.
+Um script que roda sozinho todo dia, procura vagas novas e as deixa dentro do
+app, em *Vagas → Minhas vagas → Seleção do agente*. **Por padrão ele não chama
+o Claude e não gasta nada**: você escolhe no app quais vagas analisar. O
+agendamento e a notificação são para macOS (`launchd` e `osascript`).
 
-O que ele faz, nesta ordem:
+O que ele faz numa execução normal, nesta ordem:
 
-1. Lê a busca inteira da API local, das vagas mais novas para as mais antigas
-   (até 21 dias), com os filtros do seu perfil.
-2. Descarta de graça, pelo título, o que é claramente de outra trilha
-   (back-end em outra linguagem, infraestrutura, dados, QA, mobile nativo).
-   Se o título também falar de front-end, a vaga fica.
-3. Salva e analisa a aderência de cada vaga, uma a uma, até achar a meta de
-   vagas **forte** ou **boa**, ou até bater o teto de análises da execução.
-4. Para as vagas forte ou boa, gera e salva o currículo adaptado.
-5. Avisa por notificação do Mac quantas vagas analisou e quantos emails pedem
+1. Lê a busca inteira da API local, das vagas mais novas para as mais antigas.
+   A busca já aplica o filtro do seu perfil (termos, título, tecnologias,
+   modalidade, contrato, senioridade, localização, idade dos alertas do
+   LinkedIn), junta anúncios repetidos e tira o que você salvou, aplicou ou
+   descartou.
+2. Descarta, pelo título, o que é claramente de outra trilha (back-end em outra
+   linguagem, infraestrutura, dados, QA, mobile nativo), a não ser que o título
+   também fale de front-end. Essa regra fica no script, voltada a front-end e
+   web, e não nos filtros do perfil.
+3. Fica só com as vagas publicadas nos últimos 21 dias, ou sem data.
+4. Salva as N mais novas em *Minhas vagas*, marcadas **"Encontrada pelo
+   agente, sem IA"**. Nenhum veredito é inventado: a vaga só passou pelos
+   filtros.
+5. Avisa por notificação do Mac quantas vagas encontrou e quantos emails pedem
    ação.
+
+Para analisar uma vaga encontrada, abra a página dela e clique em **Analisar**
+no painel *Aderência ao seu currículo*. Esse é o passo pago, e só acontece no
+seu clique. O mesmo vale para o currículo adaptado e a preparação para
+entrevista.
 
 O que ele **nunca** faz: candidatar, enviar formulário, descartar vaga, mudar
 status de candidatura ou acessar o LinkedIn. Ele prepara; quem envia é você.
 
-Ele registra URLs analisadas no estado local ao terminar a execução. Esse
-registro não é separado por perfil. O teto reinicia a cada execução e não inclui
-o custo das adaptações de currículo; não é um limite diário de gastos.
-Em geral, a primeira execução tem mais vagas pendentes; nas seguintes,
-URLs já registradas no estado local são ignoradas. Se o crédito acabar ou a chave for
-recusada durante a análise de aderência, ele interrompe a rodada. Vaga sem descrição é pulada sem gastar análise.
+Ele guarda em `~/agente-vagas/estado.json` as vagas que já salvou, para não
+repetir uma vaga que você tirou de *Minhas vagas*. Esse registro não é separado
+por perfil. Se a API estiver parada, o agente a inicia e a encerra no fim; no
+modo normal ela sobe **sem a chave da Anthropic**, então a sincronização de
+emails do início lê os emails mas não chama o Claude para classificá-los.
 
-Para agendar (exemplo: às 9h, meta de 10 vagas boas, no máximo 60 análises por execução):
+### Agendar e remover
+
+Para agendar (exemplo: às 9h, até 10 vagas novas por dia):
 
 ```bash
-scripts/instalar-agente-diario.sh 9 10 60
+scripts/instalar-agente-diario.sh 9 10
+```
+
+O agendamento **sempre roda sem IA**: o instalador não aceita `--com-ia`. Para
+tirar o agendamento:
+
+```bash
+scripts/instalar-agente-diario.sh --remover
 ```
 
 Para rodar agora, sem esperar o horário:
 
 ```bash
-node scripts/agente-diario.mjs --top 10 --teto 60
+node scripts/agente-diario.mjs --top 10
+```
+
+### Análise automática por IA (opcional, paga)
+
+Só roda quando você pede na linha de comando. Com `--com-ia`, cada vaga
+filtrada é salva e passa pela análise de aderência (Opus, a chamada mais cara
+do app), uma a uma, até achar a meta de vagas **forte** ou **boa** ou bater o
+teto de análises. Se o crédito acabar ou a chave for recusada, a rodada para.
+
+```bash
+node scripts/agente-diario.mjs --com-ia --top 5 --teto 30
+```
+
+O currículo adaptado automático pede uma opção a mais, e só é gerado para
+vagas forte ou boa:
+
+```bash
+node scripts/agente-diario.mjs --com-ia --com-curriculo --max-curriculos 5
 ```
 
 | Opção | O que faz |
 | --- | --- |
-| `--top N` | Meta: quantas vagas forte ou boa encontrar (até 50) |
-| `--teto N` | Máximo de tentativas de análise por execução (até 500, padrão 60) |
-| `--sem-curriculo` | Analisa, mas não gera currículo adaptado |
-| `--sem-analise` | Só lista as vagas da triagem, sem chamar o Claude |
+| `--top N` | Sem IA: quantas vagas novas salvar (até 50, padrão 10). Com IA: a meta de vagas forte ou boa (padrão 5) |
+| `--com-ia` | Liga a análise de aderência paga para cada vaga filtrada |
+| `--teto N` | Com `--com-ia`: máximo de **análises** por execução (até 500, padrão 60). Limita a quantidade, não o valor em dinheiro; sem `--com-ia`, é ignorado |
+| `--com-curriculo` | Com `--com-ia`: gera o currículo adaptado das vagas forte ou boa. Sozinho, é recusado |
+| `--max-curriculos N` | Com `--com-curriculo`: máximo de currículos por execução (até 100, padrão 10) |
 | `--sem-aviso` | Não mostra a notificação |
 
-**Mantenha o Postgres e a API em execução ao usar o agente.** O script tenta
-iniciar a API quando ela está parada, mas esse caminho não carrega explicitamente
-o `.env` do backend; não conte com ele numa instalação feita apenas com os
-passos do README. Iniciar a API também pode disparar a sincronização de emails
-e chamadas de classificação, mesmo com `--sem-analise`; para evitar isso, use
-`IMAP_SYNC_ON_BOOT=false`. O log e a memória do agente ficam em `~/agente-vagas`, fora do projeto. Para tirar o
-agendamento: `scripts/instalar-agente-diario.sh --remover`.
+Opção digitada errada (por exemplo `--com-IA`) faz o agente parar com erro, em
+vez de rodar de um jeito que você não pediu. Com IA, cada análise custa em
+torno de alguns centavos de dólar, e o teto é por execução, não por dia:
+acompanhe o gasto no [console da Anthropic](https://console.anthropic.com/).
+
+O log e a memória do agente ficam em `~/agente-vagas`, fora do projeto.
 
 ## Problemas comuns
 
