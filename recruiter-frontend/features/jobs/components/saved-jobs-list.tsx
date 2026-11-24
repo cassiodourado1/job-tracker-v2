@@ -28,9 +28,9 @@ interface SavedJobsListProps {
 }
 
 /**
- * Recortes da lista. "Seleção do agente" é o que o agente diário analisou e
- * você ainda não enviou: é a fila do dia, e por isso sai quando você marca
- * "Já me candidatei". O relatório fora do app deixou de ser o lugar disto.
+ * Recortes da lista. "Seleção do agente" é o que o agente diário encontrou
+ * (por padrão sem IA) ou analisou, e você ainda não enviou: é a fila do dia,
+ * e por isso sai quando você marca "Já me candidatei".
  */
 type View = "agente" | "pendentes" | "candidatadas" | "todas";
 
@@ -38,7 +38,8 @@ const VIEWS: { id: View; label: string; empty: string }[] = [
   {
     id: "agente",
     label: "Seleção do agente",
-    empty: "Nada na seleção do agente. Ele analisa as vagas todo dia às 9h.",
+    empty:
+      "Nada na seleção do agente. Ele procura vagas novas todo dia às 9h, sem IA.",
   },
   {
     id: "pendentes",
@@ -63,7 +64,10 @@ const VERDICT_ORDER: Record<FitVerdict, number> = {
 function inView(item: SavedJob, view: View): boolean {
   switch (view) {
     case "agente":
-      return item.fit?.origin === "agente" && !item.application;
+      return (
+        (item.origin === "agente" || item.fit?.origin === "agente") &&
+        !item.application
+      );
     case "pendentes":
       return !item.application;
     case "candidatadas":
@@ -74,19 +78,24 @@ function inView(item: SavedJob, view: View): boolean {
 }
 
 /**
- * Na seleção do agente, a melhor aderência primeiro e, no empate, a análise
- * mais recente: é a ordem em que vale a pena enviar. Nos outros recortes, a
- * ordem de quando você salvou, como sempre foi.
+ * Na seleção do agente, as analisadas primeiro, da melhor aderência para a
+ * pior (no empate, a análise mais recente): é a ordem em que vale a pena
+ * enviar. Depois, as encontradas sem IA, na ordem em que o agente salvou.
+ * Nos outros recortes, a ordem de quando você salvou, como sempre foi.
  */
 function ordered(items: SavedJob[], view: View): SavedJob[] {
   if (view !== "agente") {
     return items;
   }
 
+  const rank = (item: SavedJob) =>
+    item.fit ? VERDICT_ORDER[item.fit.verdict] : Object.keys(VERDICT_ORDER).length;
+
+  // sort é estável: entre as sem análise, fica a ordem de salvamento.
   return [...items].sort(
     (a, b) =>
-      VERDICT_ORDER[a.fit!.verdict] - VERDICT_ORDER[b.fit!.verdict] ||
-      b.fit!.analyzedAt.localeCompare(a.fit!.analyzedAt),
+      rank(a) - rank(b) ||
+      (a.fit && b.fit ? b.fit.analyzedAt.localeCompare(a.fit.analyzedAt) : 0),
   );
 }
 
@@ -177,7 +186,7 @@ function SavedCard({
   profileId: string;
   item: SavedJob;
 }) {
-  const { job, application, fit, tailored } = item;
+  const { job, application, fit, tailored, origin, savedAt } = item;
   const [error, setError] = useState<string | null>(null);
   const [fill, setFill] = useState<FillState>({ status: "idle" });
   const [confirming, setConfirming] = useState(false);
@@ -249,6 +258,24 @@ function SavedCard({
                 {fit.summary}
               </p>
             </div>
+          )}
+
+          {/* Sem veredito inventado: a vaga só passou pelo filtro do perfil e
+              pela triagem por código. A análise é um clique na página dela. */}
+          {!fit && origin === "agente" && (
+            <span className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-semibold text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+                Encontrada pelo agente, sem IA
+              </span>
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                em{" "}
+                {new Date(savedAt).toLocaleDateString("pt-BR", {
+                  timeZone: "America/Sao_Paulo",
+                  day: "2-digit",
+                  month: "2-digit",
+                })}
+              </span>
+            </span>
           )}
 
           {!fit && application && (

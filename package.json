@@ -12,6 +12,7 @@
     "dev:web": "npm run dev -w recruiter-frontend",
     "dev:worker": "npm run start:dev -w recruiter-backend",
     "build:shared": "npm run build -w @recruit/shared",
+    "test:agente": "node --test scripts/agente/*.spec.mjs",
     "build": "npm run build:shared && npm run build -w recruiter-backend -w recruiter-frontend",
     "lint": "npm run lint --workspaces --if-present",
     "infra:up": "docker compose up -d",
