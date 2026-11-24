@@ -99,6 +99,8 @@ export const envSchema = z.object({
 
   // Opcionais: sem elas, a feature correspondente fica desligada.
   ANTHROPIC_API_KEY: optionalString,
+  /** Token pessoal de leitura da API Rebase Jobs. Vazio: fonte desligada. */
+  REBASE_JOBS_TOKEN: optionalString,
   IMAP_HOST: optionalString,
   IMAP_PORT: z.coerce.number().int().positive().default(993),
   IMAP_USER: optionalString,
