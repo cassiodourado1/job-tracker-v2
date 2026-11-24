@@ -42,7 +42,7 @@ assistido para antes do envio. Sugestões de status por IA precisam de confirma�
 | Métricas | Funil, tempo até a primeira resposta e aproveitamento por fonte | Nenhuma |
 | Assistência por IA | Extração de vaga por link, sugestões de status, resolução de emails, aderência, currículo adaptado, preparação para entrevista e respostas de formulário | API da Anthropic, com crédito |
 | Preenchimento assistido | Preenche campos reconhecidos em um navegador visível, sem enviar | Navegador Chromium |
-| Agente diário | Analisa vagas e salva currículos adaptados para revisão | API da Anthropic; agendamento no macOS |
+| Agente diário | Procura vagas novas todo dia e as deixa na Seleção do agente, sem IA por padrão | Nenhuma por padrão; agendamento no macOS. A análise automática por IA é opcional (`--com-ia`) |
 
 As fontes incluem Gupy, Remotar, Nerdin, GeekHunter, Programathor, Remotive,
 Remote OK e boards de empresas. Empresas acompanhadas podem usar Gupy, InHire,
@@ -57,7 +57,7 @@ Claude compara uma vaga específica com seu currículo e histórico profissional
 
 | | |
 | --- | --- |
-| ![Seleção do agente](docs/images/selecao-do-agente.webp) **Seleção do agente**: vagas analisadas, com veredito, resumo e currículo adaptado | ![Aderência ao currículo](docs/images/aderencia.webp) **Aderência**: o que você já mostra, o que falta e como contornar |
+| ![Seleção do agente](docs/images/selecao-do-agente.webp) **Seleção do agente**: vagas que o agente encontrou, para você escolher quais analisar; as analisadas mostram veredito, resumo e currículo adaptado | ![Aderência ao currículo](docs/images/aderencia.webp) **Aderência**: o que você já mostra, o que falta e como contornar |
 | ![Currículo adaptado e preparação para entrevista](docs/images/curriculo-e-entrevista.webp) **Currículo adaptado e preparação para entrevista** | ![Hoje](docs/images/hoje.webp) **Hoje**: convites, testes e pendências com prazo, e follow-ups |
 | ![Filtros da busca](docs/images/busca-filtros.webp) **Busca**: termos, empresas acompanhadas e filtros de título | ![Mercado](docs/images/mercado.webp) **Mercado**: vagas por fonte, dia, empresa e tecnologia |
 
@@ -148,6 +148,7 @@ Configure no `.env` do backend e reinicie a API:
 | Integração | Variáveis principais | Instruções |
 | --- | --- | --- |
 | Claude | `ANTHROPIC_API_KEY` | [Modelos, contexto enviado e custos](docs/guia-de-uso.md#claude-anthropic) |
+| Rebase Jobs | `REBASE_JOBS_TOKEN` | [Busca na Rebase Jobs](docs/guia-de-uso.md#rebase-jobs) |
 | Gmail | `IMAP_HOST`, `IMAP_USER`, `IMAP_PASSWORD`, `IMAP_MAILBOX` | [Rótulo e senha de app](docs/guia-de-uso.md#email-gmail) |
 | Boards de empresas | `DISCOVERY_GREENHOUSE_BOARDS`, `DISCOVERY_ASHBY_BOARDS`, `DISCOVERY_LEVER_BOARDS` | [Empresas acompanhadas](docs/guia-de-uso.md#empresas-acompanhadas-na-descoberta) |
 | Navegador | `FORM_FILL_BROWSER_PATH`, se não for detectado | [Preenchimento assistido](docs/guia-de-uso.md#preenchimento-de-formulário) |
@@ -156,10 +157,12 @@ As chamadas ao Claude são cobradas pela Anthropic. A implementação usa Haiku
 para extração e classificação, Sonnet para escrita e Opus para aderência.
 A disponibilidade desses modelos depende da conta utilizada.
 
-O [agente diário](docs/guia-de-uso.md#agente-diário) é opcional e faz chamadas
-pagas sem um clique para cada vaga. Sua triagem atual tem foco em front-end/web.
-O teto de análises vale **por execução**, não como orçamento diário, e não inclui
-as chamadas para adaptar currículos. Leia o guia antes de agendá-lo.
+O [agente diário](docs/guia-de-uso.md#agente-diário) **não chama o Claude por
+padrão**: ele busca, filtra e salva vagas sem nenhum custo, e você escolhe no
+app quais analisar. A análise automática só roda com a opção explícita
+`--com-ia`, e o currículo adaptado automático pede outra opção,
+`--com-curriculo`. O `--teto` limita a **quantidade** de análises por execução,
+não o valor em dinheiro. A triagem por título tem foco em front-end/web.
 
 ## Arquitetura
 
