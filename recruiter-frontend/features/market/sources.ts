@@ -33,6 +33,7 @@ const LABELS: Record<string, string> = {
   lever: "Lever",
   ashby: "Ashby",
   "portais-br": "Portais BR",
+  rebase: "Rebase Jobs",
   [OTHER]: "Outras",
 };
 

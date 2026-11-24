@@ -60,6 +60,7 @@ const SOURCE_LABELS: Record<string, string> = {
   nerdin: "Nerdin",
   empresas: "empresa acompanhada",
   "portais-br": "portais BR",
+  rebase: "Rebase Jobs",
 };
 
 const WORK_MODEL_LABELS: Record<string, string> = {

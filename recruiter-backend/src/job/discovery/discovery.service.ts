@@ -23,6 +23,7 @@ import { LinkedInAlertsSource } from './sources/linkedin-alerts';
 import { NerdinSource } from './sources/nerdin';
 import { RemotarSource } from './sources/remotar';
 import { CompanyPagesSource } from './sources/company-pages';
+import { RebaseJobsSource } from './sources/rebase';
 import { RemoteOkSource, RemotiveSource } from './sources/remote-boards';
 import { matchesDrilldown } from '../dashboard';
 import { matches, matchesTerm } from './filters';
@@ -75,6 +76,7 @@ export class DiscoveryService {
 
   constructor(prisma: PrismaService, config: ConfigService<Env, true>) {
     const watchlist = watchlistFrom(config);
+    const rebaseToken = config.get('REBASE_JOBS_TOKEN', { infer: true });
 
     this.sources = [
       new GupySource(),
@@ -94,6 +96,7 @@ export class DiscoveryService {
       new ProgramathorSource(),
       new NerdinSource(),
       new GeekHunterSource(),
+      ...(rebaseToken ? [new RebaseJobsSource(rebaseToken)] : []),
       // Por último: a ordem do array é prioridade de deduplicação, e o alerta
       // é o registro mais pobre de qualquer vaga que ele compartilhe — não
       // traz descrição. Se a mesma vaga vier do Greenhouse, a versão rica vence.
