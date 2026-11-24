@@ -212,6 +212,11 @@ model SavedJob {
   jobId     String
   savedAt   DateTime @default(now())
 
+  /// Quem salvou: você, na tela, ou o agente diário. Separa as vagas que o
+  /// agente encontrou sem IA, para elas aparecerem na Seleção do agente sem um
+  /// veredito inventado. Mesmo enum da análise: a pergunta é a mesma.
+  origin FitOrigin @default(tela)
+
   profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
   job     Job     @relation(fields: [jobId], references: [id], onDelete: Cascade)
 

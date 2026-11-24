@@ -247,7 +247,11 @@ export class JobService {
    * Materializa o resultado externo. A vaga é deduplicada por `url`: se outro
    * perfil já salvou a mesma, os dois apontam para o mesmo `Job`.
    */
-  async save({ profileId, result }: SaveJobInput): Promise<SavedJob> {
+  async save({
+    profileId,
+    result,
+    origin = 'tela',
+  }: SaveJobInput): Promise<SavedJob> {
     return this.prisma.$transaction(async (tx) => {
       const profile = await tx.profile.findUnique({
         where: { id: profileId },
@@ -300,7 +304,9 @@ export class JobService {
       // Salvar duas vezes não duplica nem falha: o @@unique garante um por par.
       const saved = await tx.savedJob.upsert({
         where: { profileId_jobId: { profileId, jobId: job.id } },
-        create: { profileId, jobId: job.id },
+        // Salvar de novo não troca a origem: a vaga continua de quem a
+        // salvou primeiro.
+        create: { profileId, jobId: job.id, origin },
         update: {},
       });
 
@@ -308,6 +314,7 @@ export class JobService {
         jobId: job.id,
         savedAt: saved.savedAt.toISOString(),
         job: toJobDto(job),
+        origin: saved.origin,
         application: null,
         // A vaga pode já existir (outro caminho a salvou antes) com análise.
         ...(await savedExtras(tx, profileId, job.id)),
@@ -347,6 +354,7 @@ export class JobService {
       jobId: row.jobId,
       savedAt: row.savedAt.toISOString(),
       job: toJobDto(row.job),
+      origin: row.origin,
       application: row.job.applications[0] ?? null,
       fit: fitSummary(row.job.jobFits[0]),
       tailored: row.job.resumeVersions.length > 0,
